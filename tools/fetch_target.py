@@ -51,7 +51,7 @@ def main():
             artifacts.append((lib['name'], artifact))
     record = {'requested_version':args.version, 'resolved_version':target,
               'java_version':metadata.get('javaVersion'), 'artifacts':[],
-              'scope':'Client and all library artifact JARs, without OS rule filtering. Native classifiers, assets and code execution excluded.'}
+              'scope':'Client and all library artifact JARs, without OS rule filtering. Includes native JARs listed as artifacts; separate downloads.classifiers entries and assets excluded. No code execution.'}
     for number, (name, item) in enumerate(artifacts):
         data = verified_download(item)
         path = jar_dir / f'{number:04d}.jar'

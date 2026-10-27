@@ -14,7 +14,7 @@ Minecraft 실행, Java 25 웹 런타임, TeaVM 변환, 청크 렌더러는 구�
 공식 메타데이터가 지정한 클라이언트와 라이브러리 JAR을 임시 다운로드하고 해시를 검증한 뒤 정적 분석합니다.
 게임 코드를 실행하지 않으며, 결과물 `compatibility-report`에는 JSON 보고서만 포함합니다.
 `target.json`에 실제 선택한 버전, Java 요구 정보, JAR별 SHA-256이 기록됩니다.
-모든 라이브러리 artifact JAR을 OS 규칙 필터 없이 분석하며 native classifier와 assets는 제외합니다.
+모든 라이브러리 artifact JAR을 OS 규칙 필터 없이 분석하므로 artifact로 등록된 native JAR도 포함합니다. 별도 downloads.classifiers 항목과 assets는 제외합니다.
 따라서 iPad 실행용 라이브러리 구성이 확정되는 것은 아닙니다.
 
 ### 개발 환경에서 직접 실행
