@@ -19,16 +19,17 @@ struct Output { @builtin(position) position:vec4f, @location(0) color:vec3f }
 @fragment fn fs(in:Output)->@location(0) vec4f { return vec4f(in.color,1.0); }
 `;
 
-export async function startVoxelView(canvas,status,onSelection=()=>{}) {
+export async function startVoxelView(canvas,status,onSelection=()=>{},preparedContext=undefined) {
   if(!navigator.gpu) throw new Error('WebGPU를 사용할 수 없습니다.');
+  // Acquire the surface before awaits and before allocating a GPU device.
+  const context=preparedContext===undefined?canvas.getContext('webgpu'):preparedContext;
+  if(!context)throw new Error('새 캔버스에서도 WebGPU 컨텍스트를 만들지 못했습니다. 이전 테스트 탭을 닫고 Safari에서 페이지를 다시 열어 주세요.');
   const app=await loadMinecraftSmoke();
   const terrain=createEditableTerrain(app.exports);
   let selected=null,mesh=meshVoxels(terrain.values);
   const adapter=await navigator.gpu.requestAdapter();
   if(!adapter) throw new Error('WebGPU 어댑터가 없습니다.');
   const device=await adapter.requestDevice();
-  const context=canvas.getContext('webgpu');
-  if(!context) {device.destroy();throw new Error('WebGPU canvas를 생성하지 못했습니다.');}
   let depth,vertex,uniform,observer,raf=0,disposed=false;
   const pointers=new Map();
   let yaw=.75,pitch=.55,distance=34;
@@ -97,7 +98,8 @@ export async function startVoxelView(canvas,status,onSelection=()=>{}) {
     disposed=true;cancelAnimationFrame(raf);observer?.disconnect();
     canvas.removeEventListener('pointerdown',down);canvas.removeEventListener('pointermove',move);
     canvas.removeEventListener('pointerup',end);canvas.removeEventListener('pointercancel',end);
-    depth?.destroy();vertex?.destroy();uniform?.destroy();context.unconfigure();device.destroy();
+    depth?.destroy();vertex?.destroy();uniform?.destroy();
+    try {context.unconfigure();} finally {device.destroy();}
   }
   let pipeline,bind;
   try {

@@ -51,8 +51,9 @@ import {runJavaSmoke} from './java-smoke-check.mjs';
 import {runMinecraftSmoke,loadMinecraftSmoke} from './minecraft-smoke-check.mjs';
 import {verifyBitStorage} from './bit-storage-check.mjs';
 import {startVoxelView} from './voxel-view.mjs';
+import {freshGpuSurface} from './canvas-surface.mjs';
 const voxelButton=document.querySelector('#voxel-run');
-const voxelCanvas=document.querySelector('#voxel-canvas');
+let voxelCanvas=document.querySelector('#voxel-canvas');
 const voxelResult=document.querySelector('#voxel-result');
 const zoomIn=document.querySelector('#zoom-in'),zoomOut=document.querySelector('#zoom-out');
 const removeButton=document.querySelector('#block-remove'),placeButton=document.querySelector('#block-place');
@@ -74,9 +75,11 @@ voxelButton.addEventListener('click',async()=>{
   selectionChanged(null);resetButton.disabled=true;
   voxelResult.textContent='원본 저장소 → 메쉬 → WebGPU 화면을 생성 중입니다…';voxelResult.className='';
   try {
+    const surface=freshGpuSurface(document.querySelector('#voxel-canvas'));
+    voxelCanvas=surface.canvas;
     voxelView=await startVoxelView(voxelCanvas,(message,ok)=>{
       voxelResult.textContent=message;voxelResult.className=ok?'pass':'fail';
-    },selectionChanged);
+    },selectionChanged,surface.context);
     zoomIn.disabled=false;zoomOut.disabled=false;
     resetButton.disabled=false;
   } catch(error) {voxelResult.textContent=String(error);voxelResult.className='fail';}
@@ -84,7 +87,10 @@ voxelButton.addEventListener('click',async()=>{
 });
 zoomIn.addEventListener('click',()=>voxelView?.zoom(-3));
 zoomOut.addEventListener('click',()=>voxelView?.zoom(3));
-window.addEventListener('pagehide',()=>voxelView?.dispose());
+window.addEventListener('pagehide',()=>{
+  voxelView?.dispose();voxelView=undefined;
+  zoomIn.disabled=true;zoomOut.disabled=true;resetButton.disabled=true;selectionChanged(null);
+});
 const storageButton=document.querySelector('#storage-run');
 const storageResult=document.querySelector('#storage-result');
 storageButton.addEventListener('click',async()=>{

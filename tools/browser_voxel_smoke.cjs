@@ -18,11 +18,24 @@ const {mkdirSync}=require('node:fs');
     const errors=[];page.on('pageerror',error=>errors.push(String(error)));
     page.on('console',message=>console.log(`Browser ${message.type()}: ${message.text()}`));
     await page.goto('http://127.0.0.1:8123');
+    await page.evaluate(()=>{
+      // Reproduce both an incompatible old context and a one-off null result.
+      window.oldVoxelCanvas=document.querySelector('#voxel-canvas');
+      window.oldVoxelCanvas.getContext('2d');
+      const original=HTMLCanvasElement.prototype.getContext;
+      let injected=false;
+      HTMLCanvasElement.prototype.getContext=function(type,...args){
+        if(this.id==='voxel-canvas'&&type==='webgpu'&&!injected){injected=true;return null;}
+        return original.call(this,type,...args);
+      };
+    });
     await page.locator('#voxel-run').click();
     await page.waitForFunction(()=>document.querySelector('#voxel-canvas').dataset.rendered==='true'||document.querySelector('#voxel-result').className==='fail',{},{timeout:60000});
     const text=await page.locator('#voxel-result').innerText();
     if(await page.locator('#voxel-canvas').getAttribute('data-rendered')!=='true')throw new Error(text);
     const canvas=page.locator('#voxel-canvas');
+    if(await canvas.getAttribute('data-context-attempts')!=='2')throw new Error('Null context retry was not exercised');
+    if(await page.evaluate(()=>window.oldVoxelCanvas===document.querySelector('#voxel-canvas')))throw new Error('Old canvas was reused');
     const before=await canvas.screenshot();
     const cameraBefore=await canvas.getAttribute('data-camera');
     const box=await canvas.boundingBox();
@@ -61,9 +74,14 @@ const {mkdirSync}=require('node:fs');
     if(await canvas.getAttribute('data-edits')!=='0'||Number(await canvas.getAttribute('data-blocks'))!==initialBlocks)throw new Error('Terrain reset mismatch');
     await page.waitForTimeout(150);
     if(await canvas.getAttribute('data-rendered')!=='true')throw new Error('GPU error after terrain editing');
+    await page.evaluate(()=>{window.previousVoxelCanvas=document.querySelector('#voxel-canvas');});
+    await page.locator('#voxel-run').click();
+    await page.waitForFunction(()=>document.querySelector('#voxel-canvas').dataset.rendered==='true'||document.querySelector('#voxel-result').className==='fail');
+    if(await canvas.getAttribute('data-rendered')!=='true')throw new Error(await page.locator('#voxel-result').innerText());
+    if(await page.evaluate(()=>window.previousVoxelCanvas===document.querySelector('#voxel-canvas')))throw new Error('Restart reused previous canvas');
     if(errors.length)throw new Error(errors.join('\n'));
     mkdirSync('reports',{recursive:true});
     await canvas.screenshot({path:'reports/voxel-render.png'});
-    console.log(`WebGPU browser: ${text}; drag, picking, remove, place, diagnostic isolation and reset passed`);
+    console.log(`WebGPU browser: ${text}; null-context recovery, fresh-canvas restart, drag, picking, remove, place, diagnostic isolation and reset passed`);
   }finally{await browser?.close();server.kill();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

@@ -10,6 +10,7 @@ on:
       - 'web/bit-storage-check.mjs'
       - 'tools/check_bit_storage.mjs'
       - 'web/voxel-*.mjs'
+      - 'web/canvas-surface.mjs'
       - 'web/index.html'
       - 'tools/test_voxel.mjs'
       - 'tools/test_voxel_edit.mjs'
