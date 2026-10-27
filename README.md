@@ -4,6 +4,31 @@
 현재는 **JAR 정적 분석 도구, 브라우저 기능 진단 페이지, 작은 Java 프로그램의 Wasm GC 빌드 실험**을 제공합니다.
 Minecraft 실행, 완전한 Java 25 웹 런타임, 게임 코드의 TeaVM 변환, 청크 렌더러는 구현하지 않았습니다.
 
+## iPad + Codespaces에서 바로 실행
+
+별도 호스팅이나 artifact 다운로드 없이 Codespaces 안에서 빌드·서빙할 수 있습니다.
+
+1. Codespaces 터미널에서 `git pull --ff-only`로 최신 코드를 가져옵니다.
+2. 명령 팔레트에서 **Codespaces: Rebuild Container**를 실행합니다.
+   새 설정이 JDK 25·Maven·Node 24·Python을 설치합니다. 완료 후 새 터미널을 여세요.
+3. 저장소 루트에서 다음을 실행합니다.
+
+```bash
+bash tools/start_codespaces.sh
+```
+
+빌드·Java Wasm 실행 검증이 성공하면 개발 서버가 계속 실행됩니다.
+**Ports → 8000 → Open in Browser**로 포워딩된 HTTPS 주소를 Safari 새 탭에서 열고,
+**환경 검사 시작**, **Java 실행 검사**를 누르세요. 포트는 비공개 상태로 사용할 수 있습니다.
+로컬 서버는 HTTP이며 Codespaces의 외부 포워딩 주소가 HTTPS를 제공합니다.
+
+개발 서버는 web 폴더만 제공하며 COOP/COEP와 캐시 비활성 헤더를 보냅니다.
+페이지 격리 성공은 프록시와 브라우저를 통과한 실제 `격리 컨텍스트` 값으로 확인하세요.
+Codespaces 안의 미리보기 iframe 대신 Safari 새 탭에서 직접 여세요.
+서버 종료는 Ctrl+C이며 Codespace가 중지되면 주소도 응답하지 않습니다.
+이미 필요한 도구가 설치되어 있다면 컨테이너 재빌드 없이 3번부터 시도할 수 있습니다.
+포트 사용 중 오류가 나면 기존 8000 서버를 실행한 터미널에서 종료한 뒤 다시 실행하세요.
+
 ## JAR 분석
 
 ### iPad에서 GitHub Actions 사용
