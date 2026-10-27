@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+*.jar
+reports/
+assets/
+saves/
+.env

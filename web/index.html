@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="ko">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Web-craft · 환경 진단</title>
+<style>
+  :root { color-scheme: dark; font-family: system-ui,sans-serif; background:#101820; color:#e7eef5 }
+  body { max-width:780px; margin:6vh auto; padding:24px }
+  h1 { font-size:2.4rem; margin-bottom:8px }
+  p { line-height:1.7; color:#b6c7d8 }
+  button { background:#85e3a6; color:#10251a; border:0; border-radius:8px; padding:12px 20px; font:inherit; cursor:pointer }
+  button:disabled { opacity:.5; cursor:wait }
+  dl { background:#1b2935; padding:20px; border-radius:12px }
+  dt { color:#b6c7d8; margin-top:16px } dt:first-child { margin-top:0 }
+  dd { margin:6px 0; overflow-wrap:anywhere }
+  .pass { color:#85e3a6 } .fail { color:#ffb2a5 }
+  canvas { width:100%; height:120px; border-radius:8px; margin-top:16px; background:#17232e }
+</style>
+<h1>Web-craft</h1>
+<p>iPad 등에서 최신 Minecraft Java 에디션의 브라우저 이식 가능성을 확인하는 환경 진단입니다. HTTPS로 접속해 주세요. 게임이나 Java 실행 환경은 아직 포함하지 않습니다.</p>
+<button id="run">환경 검사 시작</button>
+<dl id="results" aria-live="polite"><dt>상태</dt><dd>검사를 시작해 주세요.</dd></dl>
+<canvas id="canvas" width="640" height="120" aria-label="WebGPU 단색 렌더링 검사"></canvas>
+<script type="module">
+const button = document.querySelector('#run');
+const results = document.querySelector('#results');
+let device;
+function row(label, value, pass) {
+  const dt = document.createElement('dt'); dt.textContent = label;
+  const dd = document.createElement('dd'); dd.textContent = value;
+  if (pass !== undefined) dd.className = pass ? 'pass' : 'fail';
+  results.append(dt, dd);
+}
+button.addEventListener('click', async () => {
+  button.disabled = true; results.replaceChildren();
+  try {
+    if (device) { device.destroy(); device = undefined; }
+    row('브라우저 환경', navigator.userAgent);
+    row('보안 컨텍스트', String(isSecureContext), isSecureContext);
+    row('WebAssembly', typeof WebAssembly !== 'undefined' ? '지원' : '미지원', typeof WebAssembly !== 'undefined');
+    row('격리 컨텍스트', String(crossOriginIsolated), crossOriginIsolated);
+    row('공유 메모리 API', typeof SharedArrayBuffer !== 'undefined' ? '노출됨' : '노출되지 않음', typeof SharedArrayBuffer !== 'undefined');
+    row('주의', 'WebAssembly 표시만으로 Java 25·Wasm GC·스레드 지원이 검증되지는 않습니다.');
+    if (!navigator.gpu) { row('WebGPU', '사용 불가: 브라우저 설정과 HTTPS/localhost를 확인하세요.', false); return; }
+    const adapter = await navigator.gpu.requestAdapter();
+    if (!adapter) { row('WebGPU 어댑터', '선택 가능한 어댑터가 없습니다.', false); return; }
+    row('WebGPU 어댑터', '선택 성공', true);
+    row('어댑터 설명', adapter.info?.description || '브라우저에서 공개하지 않음');
+    row('최대 버퍼 크기', `${adapter.limits.maxBufferSize} bytes`);
+    row('기능', [...adapter.features].join(', ') || '선택적 기능 없음');
+    device = await adapter.requestDevice();
+    const activeDevice = device;
+    const context = document.querySelector('canvas').getContext('webgpu');
+    if (!context) throw new Error('WebGPU canvas context unavailable');
+    context.configure({device, format:navigator.gpu.getPreferredCanvasFormat(), alphaMode:'opaque'});
+    device.pushErrorScope('validation');
+    const encoder = device.createCommandEncoder();
+    const pass = encoder.beginRenderPass({colorAttachments:[{
+      view:context.getCurrentTexture().createView(),
+      clearValue:{r:0.08,g:0.38,b:0.23,a:1}, loadOp:'clear', storeOp:'store'
+    }]});
+    pass.end(); device.queue.submit([encoder.finish()]);
+    const error = await device.popErrorScope();
+    if (error) throw new Error(error.message);
+    await device.queue.onSubmittedWorkDone();
+    row('WebGPU 렌더링', '단색 렌더 패스 제출·완료 확인', true);
+    device.lost.then(info => {
+      if (device === activeDevice && info.reason !== 'destroyed') row('장치 연결 종료', info.message || info.reason, false);
+    });
+  } catch (error) { row('검사 오류', String(error), false); }
+  finally { button.disabled = false; }
+});
+</script>
+</html>
