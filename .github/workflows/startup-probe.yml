@@ -1,0 +1,35 @@
+name: Probe original Minecraft startup compilation
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/probe_minecraft_startup.py'
+      - '.github/workflows/startup-probe.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compile original main with official libraries and record blockers
+        run: python3 tools/probe_minecraft_startup.py
+      - name: Publish compiler diagnostics only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: startup-compilation-report
+          path: |
+            reports/startup-probe/result.json
+            reports/startup-probe/compile.log
+          if-no-files-found: error
+          retention-days: 14

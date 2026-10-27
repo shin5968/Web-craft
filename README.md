@@ -238,3 +238,5 @@ MCA에서 청크를 고른 뒤 **선택 청크 전체 높이 표시**를 누르�
 웹 코드 변경이므로 기존 빌드가 있으면 git pull 후 Safari를 새로고침하면 됩니다.
 
 전체 높이 보기에서 `물 숨기기`를 선택한 뒤 `선택 청크 전체 높이 표시`를 누르면 물을 제외하고 다시 표시합니다. 원본 데이터와 섹션 검증 보고서는 유지하며, 보고서의 renderedColumn에 숨긴 물 개수와 표시 블록 수를 기록합니다. 원본 파일은 수정하지 않습니다.
+
+원본 게임 시작 코드 컴파일 검사는 `Probe original Minecraft startup compilation` 워크플로 또는 Codespaces의 `python3 tools/probe_minecraft_startup.py`로 실행합니다. 공식 26.3 클라이언트의 해시를 검증하고 공식 라이브러리를 내려받아 `net.minecraft.client.main.Main`을 TeaVM Wasm GC 대상으로 직접 컴파일합니다. 게임을 실행하지 않으며 플랫폼 대체 코드를 넣지 않습니다. `startup-compilation-report`의 result.json과 compile.log에 실패 원인을 기록합니다. 워크플로가 초록색이어도 컴파일 성공을 뜻하지 않으며 result.json의 status를 확인해야 합니다. 게임·라이브러리 JAR과 생성된 Wasm은 업로드하지 않습니다.
