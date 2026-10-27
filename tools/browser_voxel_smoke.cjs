@@ -11,10 +11,12 @@ const {mkdirSync}=require('node:fs');
       await new Promise(r=>setTimeout(r,100));
     }
     browser=await chromium.launch({headless:true,args:[
-      '--enable-unsafe-webgpu','--use-angle=swiftshader','--no-sandbox'
+      '--enable-unsafe-webgpu','--use-angle=swiftshader','--use-vulkan=swiftshader',
+      '--enable-features=Vulkan','--disable-vulkan-surface','--no-sandbox'
     ]});
     const page=await browser.newPage({viewport:{width:1024,height:1000},deviceScaleFactor:1});
     const errors=[];page.on('pageerror',error=>errors.push(String(error)));
+    page.on('console',message=>console.log(`Browser ${message.type()}: ${message.text()}`));
     await page.goto('http://127.0.0.1:8123');
     await page.locator('#voxel-run').click();
     await page.waitForFunction(()=>document.querySelector('#voxel-canvas').dataset.rendered==='true'||document.querySelector('#voxel-result').className==='fail',{},{timeout:60000});
