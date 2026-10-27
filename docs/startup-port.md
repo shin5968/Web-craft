@@ -74,3 +74,30 @@ python3 tools/probe_minecraft_startup.py --target registry
 ```
 
 Results are written to ignored `reports/registry-probe/`. The existing Main probe remains available without `--target registry`. Neither command changes the WebGPU viewer.
+
+## Lazy executor boundary port
+
+Verified run: https://github.com/shin5968/Web-craft/actions/runs/40465201497
+Source commit: e1c6142a3b1e35bab44ebb55b3548d929c090cc4.
+
+`--target registry-lazy` builds an experimental transformed client **in ignored reports only**. It does not change the hash-pinned original client, the normal Main/registry probes, or the browser viewer. The transformation changes only Util: it moves BACKGROUND_EXECUTOR, IO_POOL and DOWNLOAD_POOL factory calls out of the class initializer into private synchronized lazy accessors, rewrites Util's field reads and clears final on those three private fields. Factory bodies, arguments and executor implementations remain original. Bytecode structure and the expected three initialization sequences are checked; a mismatch stops the transformation. The original client SHA-256 is verified before transformation; both original and patched hashes are recorded.
+
+The transformer uses explicitly pinned ASM 9.11.1 from Maven, supports Java 25 class files, and runs only during the build. Generated getters remain ordinary Java; this is not an implementation of browser threads or a replacement task scheduler. Desktop task execution timing now begins at first use of each pool instead of Util class initialization. Lazy accessors synchronize first use and return one retained instance per pool. Applications relying on eager startup timing need separate review.
+
+Actual checks passed:
+
+- Calling Util.getMillis initializes Util without constructing any of the three pools (JVM reflection check).
+- Each accessor constructs a non-null pool, and repeated calls return the same object.
+- A submitted task runs and completes within the timeout on each original pool; the test shuts down the executors afterward.
+- Both unmodified and lazy-patched clients execute the registry bootstrap with exit 0.
+- Both produce exactly the same measured result: 1286 blocks; air 0, stone 1, water 37.
+
+TeaVM Wasm GC compilation still fails. Actual remaining diagnostics include ScopedValue, StackWalker, atomic array types, Guava lock paths, ClassLoader resource loading, Unsafe, and other missing APIs. Do not interpret the green probe workflow or successful JVM checks as Wasm compilation or browser execution success. Result JSON and compile/JVM/executor logs are in the registry-lazy-report artifact for 14 days. No original or transformed JAR/Wasm is published.
+
+Reproduce in Codespaces:
+
+```bash
+python3 tools/probe_minecraft_startup.py --target registry-lazy
+```
+
+Next boundary: trace the ScopedValue/StackWalker context paths and the shared library lock/resource dependencies, preserving the same original-vs-port JVM checks. Required semantics must be implemented and tested, not skipped to make compiler errors disappear.

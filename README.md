@@ -242,3 +242,5 @@ MCA에서 청크를 고른 뒤 **선택 청크 전체 높이 표시**를 누르�
 원본 게임 시작 코드 컴파일 검사는 `Probe original Minecraft startup compilation` 워크플로 또는 Codespaces의 `python3 tools/probe_minecraft_startup.py`로 실행합니다. 공식 26.3 클라이언트의 해시를 검증하고 공식 라이브러리를 내려받아 `net.minecraft.client.main.Main`을 TeaVM Wasm GC 대상으로 직접 컴파일합니다. 게임을 실행하지 않으며 플랫폼 대체 코드를 넣지 않습니다. `startup-compilation-report`의 result.json과 compile.log에 실패 원인을 기록합니다. 워크플로가 초록색이어도 컴파일 성공을 뜻하지 않으며 result.json의 status를 확인해야 합니다. 게임·라이브러리 JAR과 생성된 Wasm은 업로드하지 않습니다.
 
 별도 시작 코드의 원본 블록 등록 검사는 `python3 tools/probe_minecraft_startup.py --target registry`로 실행합니다. Java 25 기준 실행과 같은 코드의 Wasm GC 컴파일을 분리해 기록합니다. 첫 검사는 JVM에서 1,286개 블록 등록에 성공했고 Wasm 컴파일은 공용 실행기·Java API 의존성으로 실패했습니다. 자세한 결과는 [원본 시작 코드 이식 기록](docs/startup-port.md)을 참고하세요. 아직 브라우저 게임 실행은 아닙니다.
+
+실험적 `Util` 실행기 지연 생성 이식은 `python3 tools/probe_minecraft_startup.py --target registry-lazy`로 검사합니다. 원본 실행기는 유지하고 생성 시점만 첫 사용으로 옮깁니다. JVM에서 세 풀의 실제 작업 실행·재사용과 원본/수정본의 동일 블록 등록 결과를 검증했습니다. Wasm 컴파일은 아직 실패하며 브라우저용 스레드 구현이 아닙니다. 수정 JAR은 reports 아래에만 생성하고 배포하지 않습니다.
