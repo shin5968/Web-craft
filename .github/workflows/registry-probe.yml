@@ -1,0 +1,37 @@
+name: Probe original block registry bootstrap
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'browser-bootstrap/**'
+      - 'tools/probe_minecraft_startup.py'
+      - '.github/workflows/registry-probe.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify registry on JVM and attempt same bootstrap with Wasm GC
+        run: python3 tools/probe_minecraft_startup.py --target registry
+      - name: Publish registry diagnostics only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: registry-bootstrap-report
+          path: |
+            reports/registry-probe/result.json
+            reports/registry-probe/compile.log
+            reports/registry-probe/jvm.log
+          if-no-files-found: error
+          retention-days: 14
