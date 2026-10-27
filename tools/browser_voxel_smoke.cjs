@@ -88,6 +88,7 @@ const {mkdirSync}=require('node:fs');
     if(await page.locator('#world-result').getAttribute('data-loaded')!=='true')throw new Error(await page.locator('#world-result').innerText());
     if(Number(await canvas.getAttribute('data-blocks'))!==1664)throw new Error('Imported MCA section block count mismatch');
     if(!(await page.locator('#voxel-result').innerText()).includes('world-fixture.mca'))throw new Error('Imported file was not connected to the renderer');
+    await page.getByText('읽은 팔레트 보기',{exact:true}).click();
     if(!(await page.locator('#world-palette').innerText()).includes('snowy'))throw new Error('Block state properties were lost');
     await page.locator('#terrain-reset').click();
     if(Number(await canvas.getAttribute('data-blocks'))!==1664||!(await page.locator('#voxel-result').innerText()).includes('world-fixture.mca'))throw new Error('Imported section reset lost source data');
