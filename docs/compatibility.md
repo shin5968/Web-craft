@@ -93,3 +93,17 @@ JDK 25의 class format 69를 입력해 TeaVM 0.16.0으로 Wasm GC를 생성합�
 객체·record·배열·정수 연산·예외 처리를 검증합니다. class format을 읽는 것과
 Java 25 전체 언어·라이브러리·동적 로딩 기능을 지원하는 것은 별개입니다.
 워크플로 결과와 iPad 실행 결과를 각각 확인해야 합니다.
+
+
+### 첫 빌드 검증 결과
+
+[Java Wasm GC 실행 기록](https://github.com/shin5968/Web-craft/actions/runs/40447957292)
+
+2026-10-27 GitHub Actions에서 JDK 25 컴파일, class major 69 확인,
+TeaVM 0.16.0 Wasm GC 변환 및 Node.js 실행이 모두 성공했습니다.
+Java 객체·배열 체크섬 6건과 예외 처리 결과가 참조값과 일치했습니다.
+`java-smoke-site` artifact에는 생성된 Wasm과 런타임을 포함한 전체 web 폴더가 있습니다.
+아이패드에서 이 Java 빌드 결과를 실행한 것은 아직 확인하지 않았습니다.
+
+이 결과로 작은 원본 Java 코드의 class 69 입력을 처리하는 경로는 확보했습니다.
+Minecraft 코드의 실제 변환, 네이티브 API 대체, Java 25 전체 호환성은 여전히 미검증입니다.
