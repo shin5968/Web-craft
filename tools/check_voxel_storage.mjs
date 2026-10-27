@@ -1,0 +1,12 @@
+import {readFileSync} from 'node:fs';
+import vm from 'node:vm';
+import {fileURLToPath} from 'node:url';
+import {terrainFromOriginalStorage,meshVoxels} from '../web/voxel-data.mjs';
+const root=new URL('../web/minecraft-smoke/',import.meta.url);
+const runtime=new URL('classes.wasm-runtime.js',root);
+vm.runInThisContext(readFileSync(runtime,'utf8'),{filename:fileURLToPath(runtime)});
+const app=await globalThis.TeaVM.wasmGC.load(new Uint8Array(readFileSync(new URL('classes.wasm',root))));
+app.exports.main([]);
+const mesh=meshVoxels(terrainFromOriginalStorage(app.exports));
+if(!mesh.blocks||!mesh.faces)throw new Error('Empty test terrain');
+console.log(`Original storage → mesh: 4096 values matched; ${mesh.blocks} blocks, ${mesh.faces} faces`);

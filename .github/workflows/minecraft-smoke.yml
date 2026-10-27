@@ -9,6 +9,11 @@ on:
       - 'web/minecraft-smoke-check.mjs'
       - 'web/bit-storage-check.mjs'
       - 'tools/check_bit_storage.mjs'
+      - 'web/voxel-*.mjs'
+      - 'web/index.html'
+      - 'tools/test_voxel.mjs'
+      - 'tools/check_voxel_storage.mjs'
+      - 'tools/browser_voxel_smoke.cjs'
       - '.github/workflows/minecraft-smoke.yml'
   workflow_dispatch:
 permissions:
@@ -41,6 +46,18 @@ jobs:
         run: node tools/check_minecraft_smoke.mjs
       - name: Verify original packed block storage
         run: node tools/check_bit_storage.mjs
+      - name: Verify visible-face meshing and original storage integration
+        run: |
+          node tools/test_voxel.mjs
+          node tools/check_voxel_storage.mjs
+      - name: Install browser test tools
+        run: |
+          npm install --prefix "$RUNNER_TEMP/webcraft-browser" --no-package-lock --no-audit --no-fund playwright@1.56.1
+          "$RUNNER_TEMP/webcraft-browser/node_modules/.bin/playwright" install --with-deps chromium
+      - name: Render terrain in headless WebGPU browser
+        env:
+          PLAYWRIGHT_MODULE: ${{ runner.temp }}/webcraft-browser/node_modules/playwright
+        run: node tools/browser_voxel_smoke.cjs
       - name: Upload provenance and results only
         if: always()
         uses: actions/upload-artifact@v4
@@ -49,3 +66,11 @@ jobs:
           path: web/minecraft-smoke/*.json
           if-no-files-found: warn
           retention-days: 14
+      - name: Upload renderer test screenshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: voxel-render-check
+          path: reports/voxel-render.png
+          if-no-files-found: ignore
+          retention-days: 7

@@ -20,4 +20,6 @@ python3 tools/prepare_minecraft_smoke.py
 mvn -B -f minecraft-smoke/pom.xml package
 node tools/check_minecraft_smoke.mjs
 node tools/check_bit_storage.mjs
+node tools/test_voxel.mjs
+node tools/check_voxel_storage.mjs
 exec python3 tools/dev_server.py

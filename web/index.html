@@ -15,6 +15,8 @@
   dd { margin:6px 0; overflow-wrap:anywhere }
   .pass { color:#85e3a6 } .fail { color:#ffb2a5 }
   canvas { width:100%; height:120px; border-radius:8px; margin-top:16px; background:#17232e }
+  #voxel-canvas { height:420px; max-height:60vh; min-height:260px; touch-action:none; display:block }
+  .voxel-controls { display:flex; gap:8px; flex-wrap:wrap; margin-top:16px }
 </style>
 <h1>Web-craft</h1>
 <p>iPad 등에서 Minecraft Java 에디션의 브라우저 이식 가능성을 확인하는 환경 진단과 일부 Java 코드 실행 실험입니다. HTTPS로 접속해 주세요. 전체 게임 실행은 아직 구현하지 않았습니다.</p>
@@ -25,6 +27,17 @@
 <p id="minecraft-result" aria-live="polite">원본 FastBufferedInputStream 클래스의 버퍼 입출력만 검사합니다. 게임 시작·월드 렌더링 검사는 아닙니다.</p>
 <button id="storage-run">청크 비트 저장소 검사</button>
 <p id="storage-result" aria-live="polite">원본 SimpleBitStorage에 합성 블록 인덱스를 넣어 읽기·쓰기·복사·64비트 압축을 검사합니다. 실제 월드 로딩은 아닙니다.</p>
+<section aria-label="테스트 청크 렌더링">
+<h2>16×16×16 테스트 지형</h2>
+<p>테스트 블록 인덱스를 Minecraft 원본 비트 저장소에 넣고 다시 읽어 WebGPU로 표시합니다. 지형 생성·색상·렌더러는 직접 작성한 실험 코드이며 실제 Minecraft 월드가 아닙니다.</p>
+<div class="voxel-controls">
+<button id="voxel-run">테스트 청크 표시</button>
+<button id="zoom-in" disabled aria-label="지형 확대">확대 +</button>
+<button id="zoom-out" disabled aria-label="지형 축소">축소 −</button>
+</div>
+<p id="voxel-result" aria-live="polite">표시 후 화면을 손가락으로 드래그하면 회전합니다.</p>
+<canvas id="voxel-canvas" width="780" height="420" aria-label="드래그로 회전하는 테스트 블록 지형"></canvas>
+</section>
 <dl id="results" aria-live="polite"><dt>상태</dt><dd>검사를 시작해 주세요.</dd></dl>
 <canvas id="canvas" width="640" height="120" aria-label="WebGPU 단색 렌더링 검사"></canvas>
 <script type="module">
@@ -32,6 +45,27 @@ import {checkGC, checkSharedMemory} from './runtime-probes.mjs';
 import {runJavaSmoke} from './java-smoke-check.mjs';
 import {runMinecraftSmoke,loadMinecraftSmoke} from './minecraft-smoke-check.mjs';
 import {verifyBitStorage} from './bit-storage-check.mjs';
+import {startVoxelView} from './voxel-view.mjs';
+const voxelButton=document.querySelector('#voxel-run');
+const voxelCanvas=document.querySelector('#voxel-canvas');
+const voxelResult=document.querySelector('#voxel-result');
+const zoomIn=document.querySelector('#zoom-in'),zoomOut=document.querySelector('#zoom-out');
+let voxelView;
+voxelButton.addEventListener('click',async()=>{
+  voxelButton.disabled=true;zoomIn.disabled=true;zoomOut.disabled=true;
+  voxelView?.dispose();voxelView=undefined;delete voxelCanvas.dataset.rendered;
+  voxelResult.textContent='원본 저장소 → 메쉬 → WebGPU 화면을 생성 중입니다…';voxelResult.className='';
+  try {
+    voxelView=await startVoxelView(voxelCanvas,(message,ok)=>{
+      voxelResult.textContent=message;voxelResult.className=ok?'pass':'fail';
+    });
+    zoomIn.disabled=false;zoomOut.disabled=false;
+  } catch(error) {voxelResult.textContent=String(error);voxelResult.className='fail';}
+  finally {voxelButton.disabled=false;}
+});
+zoomIn.addEventListener('click',()=>voxelView?.zoom(-3));
+zoomOut.addEventListener('click',()=>voxelView?.zoom(3));
+window.addEventListener('pagehide',()=>voxelView?.dispose());
 const storageButton=document.querySelector('#storage-run');
 const storageResult=document.querySelector('#storage-result');
 storageButton.addEventListener('click',async()=>{
@@ -96,7 +130,7 @@ button.addEventListener('click', async () => {
     row('기능', [...adapter.features].join(', ') || '선택적 기능 없음');
     device = await adapter.requestDevice();
     const activeDevice = device;
-    const context = document.querySelector('canvas').getContext('webgpu');
+    const context = document.querySelector('#canvas').getContext('webgpu');
     if (!context) throw new Error('WebGPU canvas context unavailable');
     context.configure({device, format:navigator.gpu.getPreferredCanvasFormat(), alphaMode:'opaque'});
     device.pushErrorScope('validation');
