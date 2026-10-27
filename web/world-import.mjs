@@ -1,12 +1,14 @@
 import {regionEntries,readRegionChunk,readStandaloneNBT,chunkSections,decodeSection} from './world-data.mjs';
 import {loadMinecraftSmoke} from './minecraft-smoke-check.mjs';
 import {newWorldReport,fingerprint,recordFailure,sectionSummary,inspectChunk,downloadWorldReport} from './world-report.mjs';
+import {decodeChunkColumn} from './world-column.mjs';
 
 export function mountWorldImport(ensureView) {
   const fileInput=document.querySelector('#world-file'),chunkSelect=document.querySelector('#world-chunk');
   const sectionSelect=document.querySelector('#world-section'),button=document.querySelector('#world-load');
   const result=document.querySelector('#world-result'),paletteOutput=document.querySelector('#world-palette');
   const inspectButton=document.querySelector('#world-check'),reportButton=document.querySelector('#world-report');
+  const columnButton=document.querySelector('#world-column');
   const inspectionResult=document.querySelector('#world-inspection');
   let bytes,entries=[],sections=[],root,filename='',busy=false,report;
   const message=(value,ok)=>{result.textContent=value;result.className=ok?'pass':'fail';};
@@ -14,10 +16,12 @@ export function mountWorldImport(ensureView) {
     fileInput.disabled=busy;chunkSelect.disabled=busy||!entries.length;
     sectionSelect.disabled=busy||!sections.length;button.disabled=busy||!sections.length;
     inspectButton.disabled=busy||!root||!sections.length;reportButton.disabled=busy||!report;
+    columnButton.disabled=busy||!root||!sections.length;
   }
   async function chooseChunk() {
     result.dataset.loaded='false';
     if(report){report.chunk=null;report.sections=[];report.errors=[];report.result={read:'pending',validation:'not-run',render:'not-run'};}
+    if(report){delete report.renderedSectionY;delete report.renderedColumn;}
     inspectionResult.textContent='';inspectionResult.dataset.complete='false';
     sections=[];root=null;sectionSelect.replaceChildren();paletteOutput.textContent='';
     const entry=entries[Number(chunkSelect.value)];
@@ -71,6 +75,7 @@ export function mountWorldImport(ensureView) {
       const label=`${filename} · 청크 (${chunk.xPos??'?'}, ${chunk.zPos??'?'}) · 섹션 Y=${chosen.y}`;
       view.loadSection(decoded,label);
       report.result.render='submitted';
+      delete report.renderedColumn;
       report.renderedSectionY=decoded.sectionY;
       const names=decoded.sourcePalette.map((state,index)=>`${index}: ${state.name} ${JSON.stringify(state.properties)}`);
       paletteOutput.textContent=names.slice(0,128).join('\n')+(names.length>128?`\n… 전체 ${names.length}개 중 앞 128개 표시`:'');
@@ -95,5 +100,22 @@ export function mountWorldImport(ensureView) {
     finally{inspectionResult.dataset.complete='true';busy=false;controls();}
   });
   reportButton.addEventListener('click',()=>{if(report)downloadWorldReport(report);});
+  columnButton.addEventListener('click',async()=>{
+    report.result.render='not-run';
+    busy=true;controls();result.dataset.columnLoaded='false';
+    try {
+      const view=await ensureView();if(!view)throw new Error('WebGPU 화면을 시작하지 못했습니다.');
+      const app=await loadMinecraftSmoke();
+      const mesh=await decodeChunkColumn(root,app.exports,(done,total)=>{inspectionResult.textContent=`청크 표시 준비: ${done}/${total}개 섹션`;});
+      const chunk=root.Level||root,label=`${filename} · 청크 (${chunk.xPos??'?'}, ${chunk.zPos??'?'}) 전체 높이`;
+      view.loadColumn(mesh,label);
+      report.result.render='column-submitted';delete report.renderedSectionY;
+      report.sections=mesh.sectionReports;report.result.validation='all-sections-passed';
+      report.renderedColumn={minY:mesh.minY,maxY:mesh.maxY,sectionCount:mesh.sectionCount,nonEmptySections:mesh.nonEmptySections,verifiedIndices:mesh.verifiedIndices};
+      message(`${mesh.sectionCount}개 섹션의 ${mesh.verifiedIndices}개 인덱스 검증 후 합쳐 표시했습니다. 공기만 있는 구간은 생략하고 위아래 섹션의 가려진 면을 제거합니다. 전체 보기는 읽기 전용입니다.`,true);
+      result.dataset.columnLoaded='true';inspectionResult.textContent='청크 전체 높이 표시 준비 완료';
+    }catch(error){recordFailure(report,'load-column',error);message(String(error),false);}
+    finally{busy=false;controls();}
+  });
   controls();
 }

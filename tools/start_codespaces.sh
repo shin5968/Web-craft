@@ -26,4 +26,6 @@ node tools/check_voxel_storage.mjs
 node tools/test_world_data.mjs
 node tools/test_world_report.mjs
 node tools/check_world_storage.mjs
+node tools/test_world_column.mjs
+node tools/check_world_column.mjs
 exec python3 tools/dev_server.py

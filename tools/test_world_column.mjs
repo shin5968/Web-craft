@@ -1,0 +1,18 @@
+import assert from 'node:assert/strict';
+import {meshColumn} from '../web/world-column.mjs';
+import {fixtureRegion,fixtureColumnNBT} from './world-fixture.mjs';
+import {mkdirSync,writeFileSync} from 'node:fs';
+const section=(y,filled=true)=>({sectionY:y,values:new Int32Array(4096).fill(filled?1:0),palette:{1:{name:'minecraft:stone',color:[.5,.5,.5]}}});
+const adjacent=meshColumn([section(-1),section(0),section(1,false)]);
+assert.equal(adjacent.blocks,8192);assert.equal(adjacent.faces,2560);
+assert.equal(adjacent.sectionCount,3);assert.equal(adjacent.nonEmptySections,2);
+assert.equal(adjacent.minY,-16);assert.equal(adjacent.maxY,15);assert.equal(adjacent.height,32);
+assert.equal(adjacent.verifiedIndices,12288);
+const gap=meshColumn([section(-1),section(1)]);assert.equal(gap.faces,3072);assert.equal(gap.height,48);
+const empty=meshColumn([section(-4,false)]);assert.equal(empty.blocks,0);assert.equal(empty.faces,0);assert.equal(empty.minY,null);
+assert.throws(()=>meshColumn([section(0),section(0)]));
+assert.throws(()=>meshColumn([section(0)],100));
+assert.ok(adjacent.vertices.every(Number.isFinite));
+for(let i=1;i<adjacent.vertices.length;i+=6)assert.ok(adjacent.vertices[i]>=-16&&adjacent.vertices[i]<=16);
+mkdirSync('reports',{recursive:true});writeFileSync('reports/column-fixture.mca',fixtureRegion(fixtureColumnNBT()));
+console.log('Chunk column: vertical neighbor culling, negative Y, gaps, empty sections, coordinates and memory cap passed');

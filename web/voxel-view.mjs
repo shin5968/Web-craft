@@ -33,7 +33,9 @@ export async function startVoxelView(canvas,status,onSelection=()=>{},preparedCo
   let depth,vertex,uniform,observer,raf=0,disposed=false;
   const pointers=new Map();
   let yaw=.75,pitch=.55,distance=34;
-  const report=()=>`${terrain.source} · ${mesh.blocks}블록 · ${mesh.faces}노출 면 · 원본 저장소 4096개 값 일치 · 수정 ${terrain.edits}회 · WebGPU 렌더링 성공`;
+  let column=null,extent=20,maxDistance=65;
+  const report=()=>column?`${column.label} · ${mesh.sectionCount}개 섹션 (${mesh.nonEmptySections}개 비공기) · ${mesh.blocks?`Y ${mesh.minY}~${mesh.maxY}`:'전부 공기'} · ${mesh.blocks}블록 · ${mesh.faces}노출 면 · ${mesh.verifiedIndices}개 인덱스 일치 · 읽기 전용`:
+    `${terrain.source} · ${mesh.blocks}블록 · ${mesh.faces}노출 면 · 원본 저장소 4096개 값 일치 · 수정 ${terrain.edits}회 · WebGPU 렌더링 성공`;
   const fail=error=>{canvas.dataset.rendered='error';status(String(error),false);};
   const draw=()=>{
     raf=0;
@@ -47,7 +49,7 @@ export async function startVoxelView(canvas,status,onSelection=()=>{},preparedCo
         depth=device.createTexture({size:[width,height],format:'depth24plus',usage:GPUTextureUsage.RENDER_ATTACHMENT});
       }
       const {eye,forward,right,up}=cameraBasis(yaw,pitch,distance);
-      const f=1/Math.tan(Math.PI/8),near=.1,far=150;
+      const f=1/Math.tan(Math.PI/8),near=.1,far=Math.max(150,distance+extent*4);
       device.queue.writeBuffer(uniform,0,new Float32Array([
         ...right,0,...up,0,...forward,0,...eye,0,f*height/width,f,far/(far-near),-far*near/(far-near)
       ]));
@@ -63,13 +65,14 @@ export async function startVoxelView(canvas,status,onSelection=()=>{},preparedCo
   };
   const schedule=()=>{if(!disposed&&!raf) raf=requestAnimationFrame(draw);};
   function rebuild() {
-    mesh=meshVoxels(terrain.values,selected?indexOf(selected.x,selected.y,selected.z):-1,terrain.palette);
+    mesh=column?column.mesh:meshVoxels(terrain.values,selected?indexOf(selected.x,selected.y,selected.z):-1,terrain.palette);
     const next=device.createBuffer({size:Math.max(24,mesh.vertices.byteLength),usage:GPUBufferUsage.VERTEX|GPUBufferUsage.COPY_DST});
     if(mesh.vertices.byteLength)device.queue.writeBuffer(next,0,mesh.vertices);
     vertex?.destroy();vertex=next;
-    canvas.dataset.blocks=String(mesh.blocks);canvas.dataset.edits=String(terrain.edits);
+    canvas.dataset.blocks=String(mesh.blocks);canvas.dataset.edits=String(column?0:terrain.edits);
     canvas.dataset.selection=JSON.stringify(selected);
-    onSelection(selected);status(report(),true);schedule();
+    canvas.dataset.mode=column?'column':'section';
+    onSelection(selected,!!column);status(report(),true);schedule();
   }
   const down=event=>{
     for(const state of pointers.values())state.moved=true;
@@ -88,6 +91,7 @@ export async function startVoxelView(canvas,status,onSelection=()=>{},preparedCo
   const end=event=>{
     const old=pointers.get(event.pointerId);pointers.delete(event.pointerId);
     if(!old||old.moved||event.type==='pointercancel'||Math.hypot(event.clientX-old.startX,event.clientY-old.startY)>8)return;
+    if(column){onSelection(null,true);return;}
     const rect=canvas.getBoundingClientRect();
     const ray=screenRay(2*(event.clientX-rect.left)/rect.width-1,1-2*(event.clientY-rect.top)/rect.height,
       canvas.width/canvas.height,cameraBasis(yaw,pitch,distance));
@@ -132,13 +136,17 @@ export async function startVoxelView(canvas,status,onSelection=()=>{},preparedCo
     observer=new ResizeObserver(schedule);observer.observe(canvas);
     canvas.addEventListener('pointerdown',down);canvas.addEventListener('pointermove',move);
     canvas.addEventListener('pointerup',end);canvas.addEventListener('pointercancel',end);
-    canvas.dataset.rendered='true';canvas.dataset.blocks=String(mesh.blocks);canvas.dataset.edits='0';canvas.dataset.selection='null';onSelection(null);status(report(),true);
+    canvas.dataset.rendered='true';canvas.dataset.blocks=String(mesh.blocks);canvas.dataset.edits='0';canvas.dataset.selection='null';canvas.dataset.mode='section';onSelection(null);status(report(),true);
     return {dispose,
-      zoom(amount){distance=Math.max(18,Math.min(65,distance+amount));schedule();},
-      remove(){terrain.remove(selected);selected=null;rebuild();},
-      place(id){terrain.place(selected,id);selected=null;rebuild();},
-      reset(){terrain.reset();selected=null;rebuild();},
-      loadSection(section,label){terrain.loadSection(section,label);selected=null;rebuild();}
+      zoom(amount){distance=Math.max(18,Math.min(maxDistance,distance+amount*Math.max(1,extent/20)));schedule();},
+      remove(){if(column)throw new Error('전체 청크는 읽기 전용입니다. 섹션을 선택해 편집하세요.');terrain.remove(selected);selected=null;rebuild();},
+      place(id){if(column)throw new Error('전체 청크는 읽기 전용입니다. 섹션을 선택해 편집하세요.');terrain.place(selected,id);selected=null;rebuild();},
+      reset(){if(column)throw new Error('전체 청크는 읽기 전용입니다.');terrain.reset();selected=null;rebuild();},
+      loadSection(section,label){terrain.loadSection(section,label);column=null;extent=20;maxDistance=65;distance=34;selected=null;rebuild();},
+      loadColumn(next,label){
+        column={mesh:next,label};selected=null;extent=Math.hypot(16,next.height,16);
+        maxDistance=Math.max(65,extent*4);distance=Math.max(34,extent*1.7);pitch=.3;rebuild();
+      }
     };
   } catch(error) {dispose();throw error;}
 }

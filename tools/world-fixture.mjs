@@ -34,7 +34,7 @@ export function encodePayload(type,value) {
 export const tag=(type,value)=>({type,value});
 export function namedRoot(compound) {return Buffer.concat([byte(10),mutf(''),encodePayload(10,compound)]);}
 
-export function fixtureNBT(palette=[{'':'minecraft:air'},{id:'minecraft:grass_block',properties:{snowy:'false'}},{Name:'minecraft:dirt',Properties:{}},{id:'minecraft:stone'},{'':'minecraft:sand'}],indices=terrainValues(),y=-4) {
+export function fixtureSection(palette=[{'':'minecraft:air'},{id:'minecraft:grass_block',properties:{snowy:'false'}},{Name:'minecraft:dirt',Properties:{}},{id:'minecraft:stone'},{'':'minecraft:sand'}],indices=terrainValues(),y=-4) {
   const bits=Math.max(4,Math.ceil(Math.log2(palette.length))),perWord=Math.floor(64/bits);
   const words=Array.from({length:Math.ceil(4096/perWord)},()=>0n);
   for(let i=0;i<4096;i++)words[Math.floor(i/perWord)]|=BigInt(indices[i])<<BigInt((i%perWord)*bits);
@@ -43,7 +43,17 @@ export function fixtureNBT(palette=[{'':'minecraft:air'},{id:'minecraft:grass_bl
     typeof value==='string'?tag(8,value):tag(10,Object.fromEntries(Object.entries(value).map(([k,v])=>[k,tag(8,v)])))])));
   const states={palette:tag(9,{type:stringList?8:10,items:entries})};
   if(palette.length>1)states.data=tag(12,words);
-  return namedRoot({DataVersion:tag(3,5023),xPos:tag(3,0),zPos:tag(3,0),sections:tag(9,{type:10,items:[{Y:tag(1,y),block_states:tag(10,states)}]})});
+  return {Y:tag(1,y),block_states:tag(10,states)};
+}
+export function fixtureNBT(palette,indices,y) {
+  return namedRoot({DataVersion:tag(3,5023),xPos:tag(3,0),zPos:tag(3,0),sections:tag(9,{type:10,items:[fixtureSection(palette,indices,y)]})});
+}
+export function fixtureColumnNBT() {
+  return namedRoot({DataVersion:tag(3,5023),xPos:tag(3,0),zPos:tag(3,0),sections:tag(9,{type:10,items:[
+    fixtureSection(['minecraft:stone'],new Int32Array(4096),-1),
+    fixtureSection(['minecraft:air','minecraft:stone'],new Int32Array(4096).fill(1),0),
+    fixtureSection(['minecraft:air'],new Int32Array(4096),1)
+  ]})});
 }
 
 export function fixtureRegion(nbt=fixtureNBT(),compression=2) {

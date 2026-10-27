@@ -1,0 +1,15 @@
+import {readFileSync} from 'node:fs';
+import vm from 'node:vm';
+import {fileURLToPath} from 'node:url';
+import assert from 'node:assert/strict';
+import {fixtureColumnNBT} from './world-fixture.mjs';
+import {readNBT} from '../web/world-data.mjs';
+import {decodeChunkColumn} from '../web/world-column.mjs';
+const root=new URL('../web/minecraft-smoke/',import.meta.url),runtime=new URL('classes.wasm-runtime.js',root);
+vm.runInThisContext(readFileSync(runtime,'utf8'),{filename:fileURLToPath(runtime)});
+const app=await globalThis.TeaVM.wasmGC.load(new Uint8Array(readFileSync(new URL('classes.wasm',root))));
+app.exports.main([]);
+const mesh=await decodeChunkColumn(readNBT(fixtureColumnNBT()).root,app.exports);
+assert.equal(mesh.blocks,8192);assert.equal(mesh.faces,2560);assert.equal(mesh.verifiedIndices,12288);
+assert.equal(mesh.minY,-16);assert.equal(mesh.maxY,15);
+console.log('Original storage → full chunk column: 3 sections, 12288 indices, 8192 blocks, 2560 faces passed');

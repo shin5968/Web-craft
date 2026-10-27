@@ -37,6 +37,7 @@
 <label>청크 <select id="world-chunk" disabled></select></label>
 <label>섹션 <select id="world-section" disabled></select></label>
 <button id="world-load" disabled>선택한 파일 섹션 표시</button>
+<button id="world-column" disabled>선택 청크 전체 높이 표시</button>
 <button id="world-check" disabled>선택 청크 전체 섹션 검사</button>
 <button id="world-report" disabled>검사 보고서 저장</button>
 </div>
@@ -75,8 +76,10 @@ const voxelResult=document.querySelector('#voxel-result');
 const zoomIn=document.querySelector('#zoom-in'),zoomOut=document.querySelector('#zoom-out');
 const removeButton=document.querySelector('#block-remove'),placeButton=document.querySelector('#block-place');
 const resetButton=document.querySelector('#terrain-reset'),selectionResult=document.querySelector('#selection-result');
-function selectionChanged(hit) {
+function selectionChanged(hit,readOnly=false) {
   removeButton.disabled=!hit;placeButton.disabled=!hit;
+  resetButton.disabled=readOnly;
+  if(readOnly){selectionResult.textContent='청크 전체 보기는 읽기 전용입니다. 편집하려면 섹션을 선택해 표시하세요.';return;}
   selectionResult.textContent=hit?`섹션 내부 선택: (${hit.x}, ${hit.y}, ${hit.z}) ${hit.blockName||''} · 선택 면 옆 빈 공간에 설치합니다.`:'짧게 탭: 블록 선택 · 드래그: 회전. 노란색으로 선택한 뒤 파괴 또는 설치를 누르세요.';
 }
 function edit(action) {
@@ -113,7 +116,7 @@ zoomIn.addEventListener('click',()=>voxelView?.zoom(-3));
 zoomOut.addEventListener('click',()=>voxelView?.zoom(3));
 window.addEventListener('pagehide',()=>{
   voxelView?.dispose();voxelView=undefined;
-  zoomIn.disabled=true;zoomOut.disabled=true;resetButton.disabled=true;selectionChanged(null);
+  zoomIn.disabled=true;zoomOut.disabled=true;selectionChanged(null);resetButton.disabled=true;
 });
 const storageButton=document.querySelector('#storage-run');
 const storageResult=document.querySelector('#storage-result');
