@@ -1,0 +1,47 @@
+name: Compile original Minecraft class
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'minecraft-smoke/**'
+      - 'tools/prepare_minecraft_smoke.py'
+      - 'tools/check_minecraft_smoke.mjs'
+      - 'web/minecraft-smoke-check.mjs'
+      - '.github/workflows/minecraft-smoke.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+          cache-dependency-path: minecraft-smoke/pom.xml
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Stage hash-pinned original class
+        run: python3 tools/prepare_minecraft_smoke.py
+      - name: Inspect original method signatures
+        run: javap -classpath minecraft-smoke/input/client.jar net.minecraft.util.ARGB
+      - name: Compile original bytecode to Wasm GC
+        run: mvn -B -f minecraft-smoke/pom.xml package
+      - name: Verify original class calculations
+        run: node tools/check_minecraft_smoke.mjs
+      - name: Upload provenance and results only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: minecraft-class-report
+          path: web/minecraft-smoke/*.json
+          if-no-files-found: warn
+          retention-days: 14

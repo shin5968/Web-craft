@@ -7,3 +7,6 @@ saves/
 .env
 java-smoke/target/
 web/java-smoke/
+minecraft-smoke/input/
+minecraft-smoke/target/
+web/minecraft-smoke/
