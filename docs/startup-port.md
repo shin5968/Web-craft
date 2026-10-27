@@ -43,3 +43,34 @@ python3 tools/probe_minecraft_startup.py
 ```
 
 Requires JDK 25, Maven and network access. It downloads the pinned client and official libraries to ignored reports/startup-probe, then runs the compiler with a 240-second timeout. It does not change the browser app or upload binaries. A timeout is recorded as timeout, not compilation failure or success.
+
+## Isolated registry bootstrap result
+
+On 2026-10-27, commit affae583e966b568f466bffd3b9f75800af176fb added `browser-bootstrap/src/main/java/dev/webcraft/browser/RegistryBootstrap.java`.
+
+This is a custom port entry point, invoking original `SharedConstants.tryDetectVersion()` then `Bootstrap.bootStrap()`, without `net.minecraft.client.main.Main`.
+
+Verified run: https://github.com/shin5968/Web-craft/actions/runs/40462293804
+
+| Check | Actual result |
+| --- | --- |
+| Java 25 compilation of custom entry point | Passed |
+| Original registry initialization on JVM | Passed, process exit 0 |
+| Original block registry size | 1286 |
+| Air / stone / water numeric IDs | 0 / 1 / 37 |
+| Same entry point compiled with TeaVM Wasm GC | compile-failed |
+| Browser execution | Not reached |
+
+The JVM baseline checks the original names of all three blocks as well as the nonempty registry. It does not create a window, log in, download assets, or load a saved world. These IDs are a measured result for this pinned version, not a general stable block ID mapping.
+
+Actual compiler errors include `Util$makeIoExecutor$lambda$_20_0` extending missing `ThreadFactory`, missing `ExecutorService`/`ForkJoinPool`, `ScopedValue`, `StackWalker`, `ReentrantLock`, resource loading and `Unsafe` paths. The full list is in registry-bootstrap-report/compile.log; the JSON summary is truncated to its first 200 matching lines. Optional library references may be mixed with mandatory dependencies.
+
+The custom entry point alone therefore does not solve the class-library boundary. Next work should trace and isolate the shared Util initialization/executor boundary, along with required library adaptations, using this JVM baseline as the reference. Required scheduling and locking behavior needs a real browser implementation or a deliberately tested execution model, not success-returning stubs.
+
+To reproduce in Codespaces:
+
+```bash
+python3 tools/probe_minecraft_startup.py --target registry
+```
+
+Results are written to ignored `reports/registry-probe/`. The existing Main probe remains available without `--target registry`. Neither command changes the WebGPU viewer.
