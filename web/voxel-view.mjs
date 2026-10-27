@@ -56,6 +56,8 @@ export async function startVoxelView(canvas,status,onSelection=()=>{}) {
         depthStencilAttachment:{view:depth.createView(),depthClearValue:1,depthLoadOp:'clear',depthStoreOp:'store'}});
       pass.setPipeline(pipeline);pass.setBindGroup(0,bind);pass.setVertexBuffer(0,vertex);
       pass.draw(mesh.vertexCount);pass.end();device.queue.submit([encoder.finish()]);
+      canvas.dataset.camera=JSON.stringify([yaw,pitch,distance]);
+      canvas.dataset.frames=String(Number(canvas.dataset.frames||0)+1);
     } catch(error) {fail(error);}
   };
   const schedule=()=>{if(!disposed&&!raf) raf=requestAnimationFrame(draw);};
