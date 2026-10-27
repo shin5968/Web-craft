@@ -6,6 +6,7 @@ import {fixtureNBT} from './world-fixture.mjs';
 import {readNBT,chunkSections,decodeSection} from '../web/world-data.mjs';
 import {terrainValues,meshVoxels} from '../web/voxel-data.mjs';
 import {createEditableTerrain,pickVoxel} from '../web/voxel-edit.mjs';
+import {inspectChunk} from '../web/world-report.mjs';
 const root=new URL('../web/minecraft-smoke/',import.meta.url),runtime=new URL('classes.wasm-runtime.js',root);
 vm.runInThisContext(readFileSync(runtime,'utf8'),{filename:fileURLToPath(runtime)});
 const app=await globalThis.TeaVM.wasmGC.load(new Uint8Array(readFileSync(new URL('classes.wasm',root))));
@@ -35,4 +36,10 @@ assert.equal(Object.keys(terrain.palette).length,Object.keys(decoded.palette).le
 const invalid={...section,block_states:{...section.block_states,data:[0n]}};assert.throws(()=>decodeSection(invalid,app.exports));
 const invalidIndex={...section,block_states:{...section.block_states,data:[...section.block_states.data]}};
 invalidIndex.block_states.data[0]=15n;assert.throws(()=>decodeSection(invalidIndex,app.exports));
+const mixed=readNBT(fixtureNBT()).root;
+mixed.sections.push({...invalid,Y:0});
+const inspected=await inspectChunk(mixed,app.exports);
+assert.equal(inspected.length,2);assert.equal(inspected[0].status,'passed');assert.equal(inspected[1].status,'failed');
+assert.equal(inspected[0].nonAir,1664);assert.equal(inspected[0].verifiedIndices,4096);
+assert.ok(inspected[1].error);
 console.log(`NBT → original raw-long constructor: ${cases+1} palette cases, 4096 indices each; non-air index zero and imported reset passed`);

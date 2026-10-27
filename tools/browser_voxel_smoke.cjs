@@ -1,6 +1,6 @@
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
 const {spawn}=require('node:child_process');
-const {mkdirSync}=require('node:fs');
+const {mkdirSync,readFileSync}=require('node:fs');
 
 (async()=>{
   const server=spawn('python3',['tools/dev_server.py','--port','8123'],{stdio:'ignore'});
@@ -90,12 +90,25 @@ const {mkdirSync}=require('node:fs');
     if(!(await page.locator('#voxel-result').innerText()).includes('world-fixture.mca'))throw new Error('Imported file was not connected to the renderer');
     await page.getByText('읽은 팔레트 보기',{exact:true}).click();
     if(!(await page.locator('#world-palette').innerText()).includes('snowy'))throw new Error('Block state properties were lost');
+    await page.locator('#world-check').click();
+    await page.waitForFunction(()=>document.querySelector('#world-inspection').dataset.complete==='true');
+    if(await page.locator('#world-inspection').getAttribute('class')!=='pass')throw new Error(await page.locator('#world-inspection').innerText());
+    const downloadPromise=page.waitForEvent('download');await page.locator('#world-report').click();
+    const download=await downloadPromise;
+    const report=JSON.parse(readFileSync(await download.path(),'utf8'));
+    if(report.result.validation!=='all-sections-passed'||report.sections[0].verifiedIndices!==4096||report.file.sha256.length!==64)throw new Error('Downloaded inspection report mismatch');
     await page.locator('#terrain-reset').click();
     if(Number(await canvas.getAttribute('data-blocks'))!==1664||!(await page.locator('#voxel-result').innerText()).includes('world-fixture.mca'))throw new Error('Imported section reset lost source data');
     await page.waitForTimeout(150);
     if(errors.length)throw new Error(errors.join('\n'));
     mkdirSync('reports',{recursive:true});
     await canvas.screenshot({path:'reports/voxel-render.png'});
-    console.log(`WebGPU browser: ${text}; null-context recovery, restart, editing and MCA file → palette → original storage → rendered section passed`);
+    await page.locator('#world-file').setInputFiles({name:'broken.mca',mimeType:'application/octet-stream',buffer:Buffer.from([0,1,2])});
+    await page.waitForFunction(()=>document.querySelector('#world-result').className==='fail'&&!document.querySelector('#world-report').disabled);
+    const failedDownloadPromise=page.waitForEvent('download');await page.locator('#world-report').click();
+    const failedDownload=await failedDownloadPromise;
+    const failedReport=JSON.parse(readFileSync(await failedDownload.path(),'utf8'));
+    if(failedReport.result.read!=='failed'||!failedReport.errors.length||failedReport.file.name!=='broken.mca')throw new Error('Failed file report mismatch');
+    console.log(`WebGPU browser: ${text}; canvas recovery, editing, MCA import and success/failure report downloads passed`);
   }finally{await browser?.close();server.kill();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

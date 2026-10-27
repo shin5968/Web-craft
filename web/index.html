@@ -37,7 +37,11 @@
 <label>청크 <select id="world-chunk" disabled></select></label>
 <label>섹션 <select id="world-section" disabled></select></label>
 <button id="world-load" disabled>선택한 파일 섹션 표시</button>
+<button id="world-check" disabled>선택 청크 전체 섹션 검사</button>
+<button id="world-report" disabled>검사 보고서 저장</button>
 </div>
+<p id="world-inspection" aria-live="polite"></p>
+<p>보고서에는 파일명·크기·가능한 경우 SHA-256, 청크 좌표·DataVersion, 섹션별 결과·블록 상태 요약·오류가 포함됩니다. 원본 파일 내용 전체나 엔티티 데이터는 포함하지 않습니다.</p>
 <p id="world-result" aria-live="polite">원본 파일은 수정하지 않습니다. 편집은 메모리에만 적용됩니다. LZ4·외부 .mcc 청크·구형 BlockStates 데이터는 아직 지원하지 않습니다.</p>
 <details><summary>읽은 팔레트 보기</summary><pre id="world-palette" style="white-space:pre-wrap;overflow-wrap:anywhere"></pre></details>
 </details>

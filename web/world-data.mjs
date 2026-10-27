@@ -119,7 +119,7 @@ function paletteState(entry) {
   if(entry&&typeof entry==='object') {
     if(typeof entry['']==='string')return paletteState(entry['']);
     const name=entry.id??entry.Name,properties=entry.properties??entry.Properties??Object.create(null);
-    if(typeof name==='string'&&properties&&typeof properties==='object'&&!Array.isArray(properties))return {name,properties};
+    if(typeof name==='string'&&properties&&typeof properties==='object'&&!Array.isArray(properties)&&Object.values(properties).every(value=>typeof value==='string'))return {name,properties};
   }
   throw new Error('알 수 없는 블록 팔레트 형식입니다.');
 }
