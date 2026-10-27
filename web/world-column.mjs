@@ -35,9 +35,24 @@ export function meshColumn(decodedSections,maxBytes=24*1024*1024) {
     sectionCount:decodedSections.length,nonEmptySections:nonEmpty,verifiedIndices:decodedSections.length*4096};
 }
 
-export async function decodeChunkColumn(root,api,progress=()=>{}) {
+export function columnDisplaySections(sections,hideWater=false) {
+  let hiddenWaterBlocks=0;
+  const display=sections.map(section=>{
+    if(!hideWater)return section;
+    const values=section.values.slice();
+    for(let i=0;i<values.length;i++)if(section.palette[values[i]]?.name==='minecraft:water'){
+      values[i]=0;hiddenWaterBlocks++;
+    }
+    return {...section,values};
+  });
+  return {display,hiddenWaterBlocks};
+}
+
+export async function decodeChunkColumn(root,api,progress=()=>{},options={}) {
   const sections=chunkSections(root),decoded=[];
   if(sections.length>64)throw new Error('전체 청크 보기는 최대 64개 섹션까지 지원합니다.');
   for(const {section} of sections){decoded.push(decodeSection(section,api));progress(decoded.length,sections.length);await new Promise(resolve=>setTimeout(resolve,0));}
-  const mesh=meshColumn(decoded);mesh.sectionReports=decoded.map(sectionSummary);return mesh;
+  const {display,hiddenWaterBlocks}=columnDisplaySections(decoded,!!options.hideWater);
+  const mesh=meshColumn(display);mesh.sectionReports=decoded.map(sectionSummary);
+  mesh.hideWater=!!options.hideWater;mesh.hiddenWaterBlocks=hiddenWaterBlocks;return mesh;
 }

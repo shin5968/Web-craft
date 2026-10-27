@@ -31,12 +31,13 @@
 <h2>16×16×16 테스트 지형</h2>
 <details>
 <summary>실제 월드 파일에서 섹션 읽기</summary>
-<p>Java 에디션 월드의 region 폴더 안 .mca 또는 단일 청크 .nbt 파일을 고르세요. 브라우저 안에서 읽으며 업로드하지 않습니다. 한 번에 섹션 하나만 표시합니다. 원본 NBT 읽기는 직접 작성한 코드이며 블록 데이터 디코딩에는 원본 SimpleBitStorage를 사용합니다.</p>
+<p>Java 에디션 월드의 region 폴더 안 .mca 또는 단일 청크 .nbt 파일을 고르세요. 브라우저 안에서 읽으며 업로드하지 않습니다. 섹션 하나 또는 선택 청크 전체 높이를 표시합니다. 원본 NBT 읽기는 직접 작성한 코드이며 블록 데이터 디코딩에는 원본 SimpleBitStorage를 사용합니다.</p>
 <label>파일 <input id="world-file" type="file" accept=".mca,.nbt,.dat"></label>
 <div class="voxel-controls">
 <label>청크 <select id="world-chunk" disabled></select></label>
 <label>섹션 <select id="world-section" disabled></select></label>
 <button id="world-load" disabled>선택한 파일 섹션 표시</button>
+<label><input id="world-hide-water" type="checkbox"> 물 숨기기 (전체 높이 표시에 적용)</label>
 <button id="world-column" disabled>선택 청크 전체 높이 표시</button>
 <button id="world-check" disabled>선택 청크 전체 섹션 검사</button>
 <button id="world-report" disabled>검사 보고서 저장</button>
