@@ -22,6 +22,7 @@
 <dl id="results" aria-live="polite"><dt>상태</dt><dd>검사를 시작해 주세요.</dd></dl>
 <canvas id="canvas" width="640" height="120" aria-label="WebGPU 단색 렌더링 검사"></canvas>
 <script type="module">
+import {checkGC, checkSharedMemory} from './runtime-probes.mjs';
 const button = document.querySelector('#run');
 const results = document.querySelector('#results');
 let device;
@@ -41,6 +42,13 @@ button.addEventListener('click', async () => {
     row('격리 컨텍스트', String(crossOriginIsolated), crossOriginIsolated);
     row('공유 메모리 API', typeof SharedArrayBuffer !== 'undefined' ? '노출됨' : '노출되지 않음', typeof SharedArrayBuffer !== 'undefined');
     row('주의', 'WebAssembly 표시만으로 Java 25·Wasm GC·스레드 지원이 검증되지는 않습니다.');
+    try { row('Wasm GC 실행', await checkGC(), true); }
+    catch (error) { row('Wasm GC 실행', String(error), false); }
+    try {
+      const shared = await checkSharedMemory();
+      row('공유 메모리 실행', shared.message, shared.ok);
+    } catch (error) { row('공유 메모리 실행', String(error), false); }
+    row('Java 실행', '미구현: 위 검사는 Java 25 또는 Minecraft 실행 검증이 아닙니다.');
     if (!navigator.gpu) { row('WebGPU', '사용 불가: 브라우저 설정과 HTTPS/localhost를 확인하세요.', false); return; }
     const adapter = await navigator.gpu.requestAdapter();
     if (!adapter) { row('WebGPU 어댑터', '선택 가능한 어댑터가 없습니다.', false); return; }

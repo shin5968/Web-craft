@@ -6,6 +6,19 @@ Minecraft 실행, Java 25 웹 런타임, TeaVM 변환, 청크 렌더러는 구�
 
 ## JAR 분석
 
+### iPad에서 GitHub Actions 사용
+
+저장소의 **Actions → Inspect Minecraft target → Run workflow**에서 실행합니다.
+분석 도구나 이 워크플로가 main에서 변경될 때도 최신 정식 버전을 자동 분석합니다.
+`version`에 공식 버전 ID를 지정하거나 `latest-release`를 사용하세요.
+공식 메타데이터가 지정한 클라이언트와 라이브러리 JAR을 임시 다운로드하고 해시를 검증한 뒤 정적 분석합니다.
+게임 코드를 실행하지 않으며, 결과물 `compatibility-report`에는 JSON 보고서만 포함합니다.
+`target.json`에 실제 선택한 버전, Java 요구 정보, JAR별 SHA-256이 기록됩니다.
+모든 라이브러리 artifact JAR을 OS 규칙 필터 없이 분석하며 native classifier와 assets는 제외합니다.
+따라서 iPad 실행용 라이브러리 구성이 확정되는 것은 아닙니다.
+
+### 개발 환경에서 직접 실행
+
 Python 3.10 이상, 외부 패키지 없이 실행합니다. 소유한 게임 설치 파일을 로컬에서 분석하세요.
 게임과 의존성 JAR을 모두 입력해야 분석 범위가 넓어집니다. 다운로드나 코드 실행은 하지 않습니다.
 
@@ -34,6 +47,9 @@ python3 -m http.server 8000 --directory web
 다른 기기에서 접속하거나 배포할 때는 HTTPS를 사용하세요.
 
 WebGPU 어댑터·장치 생성과 단색 렌더 패스 제출을 검사합니다.
+Wasm GC는 작은 모듈의 구조체 생성·필드 읽기를 실제 실행합니다.
+격리 컨텍스트에서는 Wasm 공유 메모리와 Worker의 Atomics 쓰기·읽기를 검사합니다.
+이 검사는 Java 스레드나 실제 Wasm 스레드 프로그램의 실행을 증명하지 않습니다.
 WebAssembly, SharedArrayBuffer 노출 여부도 표시하지만 Java·Wasm GC·병렬 실행 호환성을 증명하지는 않습니다.
 기본 Python 서버는 COOP/COEP 헤더를 보내지 않으므로 격리 컨텍스트가 false인 것이 예상 결과입니다.
 향후 공유 메모리 구성을 사용할 때는 COOP/COEP와 교차 출처 리소스 정책을 함께 설계해야 합니다.

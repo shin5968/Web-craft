@@ -1,0 +1,41 @@
+name: Inspect Minecraft target
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/**'
+      - '.github/workflows/inspect-target.yml'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Official version ID or latest-release (resolved ID recorded in report)'
+        default: latest-release
+        required: true
+        type: string
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run scanner tests
+        run: python3 -m unittest discover -s tools -v
+      - name: Download and verify official client and library JARs
+        env:
+          TARGET_VERSION: ${{ inputs.version || 'latest-release' }}
+        run: python3 tools/fetch_target.py --version "$TARGET_VERSION"
+      - name: Inspect without executing Java
+        run: python3 tools/inspect_jar.py reports/jars/*.jar --output reports/compatibility.json
+      - name: Upload JSON reports only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: compatibility-report
+          path: reports/*.json
+          if-no-files-found: warn
+          retention-days: 7
