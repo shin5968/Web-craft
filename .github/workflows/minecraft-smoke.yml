@@ -86,6 +86,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: voxel-render-check
-          path: reports/voxel-render.png
+          path: |
+            reports/voxel-render.png
+            reports/column-render.png
           if-no-files-found: ignore
           retention-days: 7
