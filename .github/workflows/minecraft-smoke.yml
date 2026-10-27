@@ -54,11 +54,12 @@ jobs:
           node tools/check_voxel_storage.mjs
       - name: Install browser test tools
         run: |
-          npm install --prefix "$RUNNER_TEMP/webcraft-browser" --no-package-lock --no-audit --no-fund playwright@1.56.1
-          "$RUNNER_TEMP/webcraft-browser/node_modules/.bin/playwright" install --with-deps chromium
+          npm install --prefix "$RUNNER_TEMP/webcraft-browser" --no-package-lock --no-audit --no-fund --fetch-retries=1 --fetch-timeout=30000 playwright@1.56.1
+          google-chrome --version
       - name: Render terrain in headless WebGPU browser
         env:
           PLAYWRIGHT_MODULE: ${{ runner.temp }}/webcraft-browser/node_modules/playwright
+          PLAYWRIGHT_CHANNEL: chrome
         run: node tools/browser_voxel_smoke.cjs
       - name: Upload provenance and results only
         if: always()

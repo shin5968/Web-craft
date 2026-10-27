@@ -10,7 +10,7 @@ const {mkdirSync}=require('node:fs');
       try {if((await fetch('http://127.0.0.1:8123')).ok)break;}catch{}
       await new Promise(r=>setTimeout(r,100));
     }
-    browser=await chromium.launch({headless:true,args:[
+    browser=await chromium.launch({headless:true,channel:process.env.PLAYWRIGHT_CHANNEL||undefined,args:[
       '--enable-unsafe-webgpu','--use-angle=swiftshader','--use-vulkan=swiftshader',
       '--enable-features=Vulkan','--disable-vulkan-surface','--no-sandbox'
     ]});
