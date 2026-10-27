@@ -3,10 +3,53 @@ package dev.webcraft;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import net.minecraft.util.FastBufferedInputStream;
+import net.minecraft.util.BitStorage;
+import net.minecraft.util.SimpleBitStorage;
 import org.teavm.jso.JSExport;
 
 /** Calls original game bytecode; no copied or reimplemented game methods. */
 public final class MinecraftSmoke {
+    private static BitStorage storage;
+    private static BitStorage snapshot;
+
+    @JSExport
+    public static void storageInit(int bits, int size) {
+        storage = new SimpleBitStorage(bits, size);
+        snapshot = null;
+    }
+
+    @JSExport
+    public static int storageGet(int index) { return storage.get(index); }
+
+    @JSExport
+    public static void storageSet(int index, int value) { storage.set(index, value); }
+
+    @JSExport
+    public static int storageSwap(int index, int value) { return storage.getAndSet(index, value); }
+
+    @JSExport
+    public static void storageFill(int value) { storage.fill(value); }
+
+    @JSExport
+    public static void storageCopy() { snapshot = storage.copy(); }
+
+    @JSExport
+    public static int storageCopyGet(int index) { return snapshot.get(index); }
+
+    @JSExport
+    public static int storageWordCount() { return storage.getRaw().length; }
+
+    @JSExport
+    public static int storageWordLow(int index) { return (int) storage.getRaw()[index]; }
+
+    @JSExport
+    public static int storageWordHigh(int index) { return (int) (storage.getRaw()[index] >>> 32); }
+
+    @JSExport
+    public static void storageReload() {
+        storage = new SimpleBitStorage(storage.getBits(), storage.getSize(), storage.getRaw().clone());
+    }
+
     public static void main(String[] args) {
         System.out.println("Minecraft 26.3 buffered stream probe ready");
     }

@@ -141,3 +141,14 @@ TeaVM 0.16.0으로 Wasm GC 변환 후 Node에서 버퍼 읽기 42건과 건너�
 건너뛰기는 InputStream이 일부만 건너뛸 수 있는 계약에 맞게 반복합니다.
 원본 게임 코드 일부의 웹 컴파일·실행 경로를 확보했지만 전체 게임은 실행하지 않았습니다.
 이 원본 클래스 실험의 iPad 실행은 아직 확인하지 않았습니다.
+
+
+## 청크 비트 저장소 검증
+
+원본 `SimpleBitStorage`, 인터페이스 `BitStorage`, 내부 InitializationException 클래스도
+기존 해시 고정 client JAR에서 확인하고 provenance에 클래스별 SHA-256을 기록합니다.
+추가 의존성은 게임 메타데이터와 같은 Apache commons-lang3 3.20.0입니다.
+합성 정수 인덱스를 24개 비트 폭/크기 조합으로 저장하고,
+읽기·교환·복사·압축 데이터 재로딩·일괄 채우기·잘못된 인덱스/값 처리를 검사합니다.
+JS BigInt로 독립 계산한 64비트 word와 실제 getRaw의 상·하위 32비트를 비교합니다.
+이 단계는 청크 저장 기초 연산이며 실제 PalettedContainer·블록 레지스트리·NBT 월드 로딩은 아닙니다.

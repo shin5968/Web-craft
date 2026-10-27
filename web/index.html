@@ -23,12 +23,26 @@
 <p id="java-result" aria-live="polite">Java 실행 검사는 빌드 artifact 전체를 배포한 페이지에서 사용할 수 있습니다.</p>
 <button id="minecraft-run">Minecraft 원본 클래스 검사</button>
 <p id="minecraft-result" aria-live="polite">원본 FastBufferedInputStream 클래스의 버퍼 입출력만 검사합니다. 게임 시작·월드 렌더링 검사는 아닙니다.</p>
+<button id="storage-run">청크 비트 저장소 검사</button>
+<p id="storage-result" aria-live="polite">원본 SimpleBitStorage에 합성 블록 인덱스를 넣어 읽기·쓰기·복사·64비트 압축을 검사합니다. 실제 월드 로딩은 아닙니다.</p>
 <dl id="results" aria-live="polite"><dt>상태</dt><dd>검사를 시작해 주세요.</dd></dl>
 <canvas id="canvas" width="640" height="120" aria-label="WebGPU 단색 렌더링 검사"></canvas>
 <script type="module">
 import {checkGC, checkSharedMemory} from './runtime-probes.mjs';
 import {runJavaSmoke} from './java-smoke-check.mjs';
-import {runMinecraftSmoke} from './minecraft-smoke-check.mjs';
+import {runMinecraftSmoke,loadMinecraftSmoke} from './minecraft-smoke-check.mjs';
+import {verifyBitStorage} from './bit-storage-check.mjs';
+const storageButton=document.querySelector('#storage-run');
+const storageResult=document.querySelector('#storage-result');
+storageButton.addEventListener('click',async()=>{
+  storageButton.disabled=true; storageResult.className='';
+  storageResult.textContent='원본 비트 저장소의 Wasm 모듈을 실행 중입니다…';
+  try {
+    const app=await loadMinecraftSmoke();
+    storageResult.textContent=verifyBitStorage(app.exports); storageResult.className='pass';
+  } catch(error) { storageResult.textContent=String(error); storageResult.className='fail'; }
+  finally { storageButton.disabled=false; }
+});
 const minecraftButton=document.querySelector('#minecraft-run');
 const minecraftResult=document.querySelector('#minecraft-result');
 minecraftButton.addEventListener('click',async()=>{

@@ -7,6 +7,8 @@ on:
       - 'tools/prepare_minecraft_smoke.py'
       - 'tools/check_minecraft_smoke.mjs'
       - 'web/minecraft-smoke-check.mjs'
+      - 'web/bit-storage-check.mjs'
+      - 'tools/check_bit_storage.mjs'
       - '.github/workflows/minecraft-smoke.yml'
   workflow_dispatch:
 permissions:
@@ -32,11 +34,13 @@ jobs:
       - name: Stage hash-pinned original class
         run: python3 tools/prepare_minecraft_smoke.py
       - name: Inspect original method signatures
-        run: javap -classpath minecraft-smoke/input/client.jar net.minecraft.util.FastBufferedInputStream
+        run: javap -classpath minecraft-smoke/input/client.jar net.minecraft.util.FastBufferedInputStream net.minecraft.util.SimpleBitStorage
       - name: Compile original bytecode to Wasm GC
         run: mvn -B -f minecraft-smoke/pom.xml package
       - name: Verify original buffered stream operations
         run: node tools/check_minecraft_smoke.mjs
+      - name: Verify original packed block storage
+        run: node tools/check_bit_storage.mjs
       - name: Upload provenance and results only
         if: always()
         uses: actions/upload-artifact@v4

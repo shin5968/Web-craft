@@ -11,6 +11,9 @@
   </properties>
   <dependencies>
     <dependency>
+      <groupId>org.apache.commons</groupId><artifactId>commons-lang3</artifactId><version>3.20.0</version>
+    </dependency>
+    <dependency>
       <groupId>local.minecraft</groupId><artifactId>client</artifactId><version>26.3</version>
       <scope>system</scope><systemPath>${project.basedir}/input/client.jar</systemPath>
     </dependency>

@@ -134,3 +134,14 @@ Java 테스트와 별도로 `web/minecraft-smoke`에 Wasm GC 모듈을 만듭니
 원본 JAR과 생성된 게임 코드 파일은 로컬 ignored 경로에 두며 저장소에 커밋하지 않습니다.
 CI도 생성된 게임 Wasm 대신 provenance·검증 결과 JSON만 artifact로 제공합니다.
 JAR 해시·클래스 해시·클래스 형식은 `web/minecraft-smoke/provenance.json`에 기록됩니다.
+
+
+## 청크 비트 저장소 실험
+
+**청크 비트 저장소 검사** 버튼은 원본 `SimpleBitStorage`·`BitStorage`를 실행합니다.
+게임 26.3 메타데이터와 같은 commons-lang3 3.20.0을 의존성으로 사용합니다.
+8개 비트 폭(1·4·5·8·9·13·16·31)과 3개 크기(1·17·4096)의 24개 조합을 검사합니다.
+읽기·쓰기, getAndSet, 독립 복사, raw long 배열 재로딩, fill, 범위 오류 처리를 포함합니다.
+JS BigInt 참조 구현으로 원본의 64비트 압축 배열도 직접 비교합니다.
+4096개 항목은 청크 섹션 크기의 합성 인덱스이며, 실제 블록 레지스트리·팔레트·월드 로딩은 아닙니다.
+기존과 같이 서버 종료 → git pull → `bash tools/start_codespaces.sh`로 빌드하고 실행합니다.

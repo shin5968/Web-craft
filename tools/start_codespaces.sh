@@ -19,4 +19,5 @@ node tools/check_java_smoke.mjs
 python3 tools/prepare_minecraft_smoke.py
 mvn -B -f minecraft-smoke/pom.xml package
 node tools/check_minecraft_smoke.mjs
+node tools/check_bit_storage.mjs
 exec python3 tools/dev_server.py

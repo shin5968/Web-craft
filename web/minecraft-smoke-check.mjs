@@ -16,7 +16,20 @@ export function verifyMinecraft(exports) {
 }
 
 let loaderPromise;
+let appPromise;
+export async function loadMinecraftSmoke() {
+  if (!appPromise) {
+    appPromise=instantiateMinecraftSmoke().catch(error=>{appPromise=undefined;throw error;});
+  }
+  return appPromise;
+}
+
 export async function runMinecraftSmoke() {
+  const app=await loadMinecraftSmoke();
+  return verifyMinecraft(app.exports);
+}
+
+async function instantiateMinecraftSmoke() {
   if (!loaderPromise) {
     loaderPromise = new Promise((resolve,reject) => {
       const script=document.createElement('script');
@@ -29,5 +42,5 @@ export async function runMinecraftSmoke() {
   const load=await loaderPromise;
   const app=await load(new URL('./minecraft-smoke/classes.wasm',import.meta.url).href);
   app.exports.main([]);
-  return verifyMinecraft(app.exports);
+  return app;
 }
