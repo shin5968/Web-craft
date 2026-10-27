@@ -1,0 +1,39 @@
+name: Probe lazy Util executor boundary
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'browser-bootstrap/**'
+      - 'tools/java/LazyUtilExecutors.java'
+      - 'tools/probe_minecraft_startup.py'
+      - '.github/workflows/registry-lazy-probe.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify lazy port semantics and attempt Wasm compilation
+        run: python3 tools/probe_minecraft_startup.py --target registry-lazy
+      - name: Publish port diagnostics only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: registry-lazy-report
+          path: |
+            reports/registry-lazy-probe/result.json
+            reports/registry-lazy-probe/compile.log
+            reports/registry-lazy-probe/*jvm.log
+            reports/registry-lazy-probe/executor-check.log
+          if-no-files-found: error
+          retention-days: 14
