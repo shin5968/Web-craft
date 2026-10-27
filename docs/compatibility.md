@@ -117,8 +117,14 @@ Minecraft 코드의 실제 변환, 네이티브 API 대체, Java 25 전체 호�
 
 ## 원본 Minecraft 클래스 실험
 
-`minecraft-smoke`는 26.3 client JAR의 `net.minecraft.util.ARGB`를 직접 참조합니다.
+`minecraft-smoke`는 26.3 client JAR의 `net.minecraft.util.FastBufferedInputStream`을 직접 참조합니다.
 클라이언트 SHA-256을 기존 정적 분석 결과로 고정하고, 원본 JAR은 다운로드 후 임시 로컬 경로에 저장합니다.
-테스트 wrapper는 원본 색상 합성·채널 추출 메서드를 호출하고 JS 참조값과 비교합니다.
-검증 범위는 색상 합성 8건·채널 추출 32건이며 게임 초기화·월드·렌더링은 포함하지 않습니다.
+테스트 wrapper는 원본 버퍼 읽기·건너뛰기·잔여 길이 메서드를 호출하고 JS 참조값과 비교합니다.
+검증 범위는 버퍼 읽기 42건·건너뛰기/잔여 길이이며 게임 초기화·월드·렌더링은 포함하지 않습니다.
 빌드와 실제 iPad 실행 상태는 각각 별도로 확인합니다.
+
+
+첫 ARGB 시도에서는 정적 초기화 `ARGB → Util → com.mojang.logging.LogUtils`가
+누락된 로깅 의존성을 요구해 TeaVM 빌드가 중단됐습니다.
+플랫폼 초기화가 없는 원본 버퍼 스트림 클래스로 첫 실행 검증 범위를 조정했습니다.
+이 장애물은 전체 게임 이식 시 공통 유틸리티 초기화를 별도로 검토해야 한다는 증거입니다.

@@ -13,4 +13,4 @@ console.log(message);
 const provenance=JSON.parse(readFileSync(new URL('provenance.json',root),'utf8'));
 writeFileSync(new URL('build-result.json',root),JSON.stringify({status:'passed',message,
   provenance,node:process.version,compiler:'TeaVM 0.16.0',
-  scope:'Original Minecraft ARGB color operations only; not game startup or world rendering.'},null,2)+'\n');
+  scope:'Original Minecraft FastBufferedInputStream operations only; not game startup or world rendering.'},null,2)+'\n');

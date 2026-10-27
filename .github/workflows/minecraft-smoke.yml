@@ -32,10 +32,10 @@ jobs:
       - name: Stage hash-pinned original class
         run: python3 tools/prepare_minecraft_smoke.py
       - name: Inspect original method signatures
-        run: javap -classpath minecraft-smoke/input/client.jar net.minecraft.util.ARGB
+        run: javap -classpath minecraft-smoke/input/client.jar net.minecraft.util.FastBufferedInputStream
       - name: Compile original bytecode to Wasm GC
         run: mvn -B -f minecraft-smoke/pom.xml package
-      - name: Verify original class calculations
+      - name: Verify original buffered stream operations
         run: node tools/check_minecraft_smoke.mjs
       - name: Upload provenance and results only
         if: always()

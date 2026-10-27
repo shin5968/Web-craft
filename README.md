@@ -125,12 +125,12 @@ Minecraft 클래스·모드·JNI·Java 25 전체 표준 API의 지원을 뜻하�
 
 Codespaces에서 서버를 Ctrl+C로 종료하고 `git pull --ff-only` 후
 `bash tools/start_codespaces.sh`를 다시 실행하세요. 추가 컨테이너 재빌드는 필요하지 않습니다.
-스크립트가 해시로 고정한 26.3 원본 client JAR을 받아 ARGB 색상 메서드를 TeaVM에 입력하고,
+스크립트가 해시로 고정한 26.3 원본 client JAR을 받아 FastBufferedInputStream 메서드를 TeaVM에 입력하고,
 Java 테스트와 별도로 `web/minecraft-smoke`에 Wasm GC 모듈을 만듭니다.
-페이지의 **Minecraft 원본 클래스 검사**를 누르면 색상 합성 8건·채널 추출 32건을 검사합니다.
+페이지의 **Minecraft 원본 클래스 검사**를 누르면 버퍼 읽기 42건·건너뛰기/잔여 길이을 검사합니다.
 
 게임 코드를 복사하거나 해당 메서드를 재구현하지 않고 원본 클래스 바이트코드를 입력합니다.
-전체 클라이언트를 실행하는 것이 아니며 도달 가능한 색상 메서드 일부만 컴파일됩니다.
+전체 클라이언트를 실행하는 것이 아니며 도달 가능한 버퍼 입출력 메서드 일부만 컴파일됩니다.
 원본 JAR과 생성된 게임 코드 파일은 로컬 ignored 경로에 두며 저장소에 커밋하지 않습니다.
 CI도 생성된 게임 Wasm 대신 provenance·검증 결과 JSON만 artifact로 제공합니다.
 JAR 해시·클래스 해시·클래스 형식은 `web/minecraft-smoke/provenance.json`에 기록됩니다.

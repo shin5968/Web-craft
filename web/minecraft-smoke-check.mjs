@@ -1,18 +1,18 @@
 export function verifyMinecraft(exports) {
-  const cases = [
-    [0,0,0,0], [255,255,255,255], [255,18,52,86], [128,255,0,127],
-    [1,2,3,4], [0,255,128,64], [127,128,129,130], [254,1,254,1]
-  ];
-  for (const channels of cases) {
-    const [a,r,g,b] = channels;
-    const expected = (a << 24) | (r << 16) | (g << 8) | b;
-    const actual = exports.pack(a,r,g,b);
-    if (actual !== expected) throw new Error(`ARGB pack mismatch: ${actual} != ${expected}`);
-    for (let i=0;i<4;i++) {
-      if (exports.component(actual,i) !== channels[i]) throw new Error(`ARGB component mismatch: ${i}`);
+  let checked=0;
+  for (const size of [0,1,7,64,8191,8192,8193]) {
+    let expected=0;
+    for (let i=0;i<size;i++) expected=(Math.imul(expected,31)+((Math.imul(i,17)+3)&255))|0;
+    for (const capacity of [1,7,64]) {
+      for (const method of ['readChecksum','bulkChecksum']) {
+        const actual=exports[method](size,capacity);
+        if (actual!==expected) throw new Error(`${method}(${size},${capacity}): ${actual} != ${expected}`);
+        checked++;
+      }
     }
   }
-  return 'Minecraft 26.3 원본 ARGB: 색상 합성 8건·채널 추출 32건 성공';
+  if (exports.skipProbe()!==1) throw new Error('Minecraft stream skip/available mismatch');
+  return `Minecraft 26.3 원본 스트림: 읽기 ${checked}건·건너뛰기/잔여 길이 검사 성공`;
 }
 
 let loaderPromise;
