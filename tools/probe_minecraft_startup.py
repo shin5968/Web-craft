@@ -69,11 +69,14 @@ def main():
     if target == 'registry-lazy':
         transformer = directory / 'transformer'
         transformer.mkdir(exist_ok=True)
-        exports = ['--add-exports','java.base/jdk.internal.org.objectweb.asm=ALL-UNNAMED',
-                   '--add-exports','java.base/jdk.internal.org.objectweb.asm.tree=ALL-UNNAMED']
-        subprocess.run(['javac',*exports,'-d',str(transformer),str(ROOT/'tools/java/LazyUtilExecutors.java')],check=True)
+        dependencies = transformer / 'dependencies'
+        subprocess.run(['mvn','-B','-ntp','-f',str(ROOT/'tools/java/pom.xml'),
+                        'org.apache.maven.plugins:maven-dependency-plugin:3.8.1:copy-dependencies',
+                        '-DoutputDirectory='+str(dependencies)],check=True)
+        asm_classpath = os.pathsep.join(str(path) for path in sorted(dependencies.glob('*.jar')))
+        subprocess.run(['javac','-cp',asm_classpath,'-d',str(transformer),str(ROOT/'tools/java/LazyUtilExecutors.java')],check=True)
         patched = directory / 'client-lazy.jar'
-        subprocess.run(['java',*exports,'-cp',str(transformer)+os.pathsep+os.pathsep.join(artifact['path'] for artifact in artifacts),'LazyUtilExecutors',artifacts[0]['path'],str(patched)],check=True)
+        subprocess.run(['java','-cp',str(transformer)+os.pathsep+asm_classpath+os.pathsep+os.pathsep.join(artifact['path'] for artifact in artifacts),'LazyUtilExecutors',artifacts[0]['path'],str(patched)],check=True)
         patch_record = dict(kind='defer-three-Util-executor-factories',originalClientSha256=SHA256,
                             patchedClientSha256=hashlib.sha256(patched.read_bytes()).hexdigest())
         artifacts[0] = dict(name='client-lazy-port',path=str(patched),sha256=patch_record['patchedClientSha256'])

@@ -1,8 +1,8 @@
 import java.nio.file.*;
 import java.util.*;
 import java.util.jar.*;
-import jdk.internal.org.objectweb.asm.*;
-import jdk.internal.org.objectweb.asm.tree.*;
+import org.objectweb.asm.*;
+import org.objectweb.asm.tree.*;
 
 /** Pinned structural port patch. Preserve factories, defer three eager calls. */
 public final class LazyUtilExecutors implements Opcodes {
@@ -11,7 +11,7 @@ public final class LazyUtilExecutors implements Opcodes {
     private static final List<String> FIELDS = List.of("BACKGROUND_EXECUTOR", "IO_POOL", "DOWNLOAD_POOL");
 
     static byte[] patch(byte[] input) {
-        ClassNode node = new ClassNode(ASM8);
+        ClassNode node = new ClassNode(ASM9);
         new ClassReader(input).accept(node, 0);
         if (!node.name.equals(OWNER)) throw new IllegalStateException("Wrong class");
         MethodNode clinit = node.methods.stream().filter(m -> m.name.equals("<clinit>")).findFirst().orElseThrow();
@@ -59,7 +59,7 @@ public final class LazyUtilExecutors implements Opcodes {
             }
         }
         for (String name : FIELDS) {
-            MethodNode getter = new MethodNode(ASM8,ACC_PRIVATE|ACC_STATIC|ACC_SYNCHRONIZED,"webcraft$lazy$"+name,"()"+TYPE,null,null);
+            MethodNode getter = new MethodNode(ASM9,ACC_PRIVATE|ACC_STATIC|ACC_SYNCHRONIZED,"webcraft$lazy$"+name,"()"+TYPE,null,null);
             LabelNode ready = new LabelNode();
             getter.instructions.add(new FieldInsnNode(GETSTATIC,OWNER,name,TYPE));
             getter.instructions.add(new InsnNode(DUP));

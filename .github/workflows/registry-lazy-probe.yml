@@ -4,7 +4,7 @@ on:
     branches: [main]
     paths:
       - 'browser-bootstrap/**'
-      - 'tools/java/LazyUtilExecutors.java'
+      - 'tools/java/**'
       - 'tools/probe_minecraft_startup.py'
       - '.github/workflows/registry-lazy-probe.yml'
   workflow_dispatch:

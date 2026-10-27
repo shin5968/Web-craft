@@ -1,0 +1,7 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>dev.webcraft</groupId><artifactId>port-transform-tools</artifactId><version>0.1.0</version>
+  <dependencies>
+    <dependency><groupId>org.ow2.asm</groupId><artifactId>asm-tree</artifactId><version>9.11.1</version></dependency>
+  </dependencies>
+</project>
