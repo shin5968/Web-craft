@@ -34,7 +34,12 @@
 <button id="voxel-run">테스트 청크 표시</button>
 <button id="zoom-in" disabled aria-label="지형 확대">확대 +</button>
 <button id="zoom-out" disabled aria-label="지형 축소">축소 −</button>
+<button id="block-remove" disabled>선택 블록 파괴</button>
+<label>설치 블록 <select id="block-type"><option value="1">잔디</option><option value="2">흙</option><option value="3">돌</option><option value="4">모래</option></select></label>
+<button id="block-place" disabled>선택한 면에 설치</button>
+<button id="terrain-reset" disabled>지형 초기화</button>
 </div>
+<p id="selection-result" aria-live="polite">짧게 탭: 블록 선택 · 드래그: 회전. 노란색으로 선택한 뒤 파괴 또는 설치를 누르세요.</p>
 <p id="voxel-result" aria-live="polite">표시 후 화면을 손가락으로 드래그하면 회전합니다.</p>
 <canvas id="voxel-canvas" width="780" height="420" aria-label="드래그로 회전하는 테스트 블록 지형"></canvas>
 </section>
@@ -50,16 +55,30 @@ const voxelButton=document.querySelector('#voxel-run');
 const voxelCanvas=document.querySelector('#voxel-canvas');
 const voxelResult=document.querySelector('#voxel-result');
 const zoomIn=document.querySelector('#zoom-in'),zoomOut=document.querySelector('#zoom-out');
+const removeButton=document.querySelector('#block-remove'),placeButton=document.querySelector('#block-place');
+const resetButton=document.querySelector('#terrain-reset'),selectionResult=document.querySelector('#selection-result');
+function selectionChanged(hit) {
+  removeButton.disabled=!hit;placeButton.disabled=!hit;
+  selectionResult.textContent=hit?`선택: (${hit.x}, ${hit.y}, ${hit.z}) · 선택 면 옆 빈 공간에 설치합니다.`:'짧게 탭: 블록 선택 · 드래그: 회전. 노란색으로 선택한 뒤 파괴 또는 설치를 누르세요.';
+}
+function edit(action) {
+  try {action();}catch(error){selectionResult.textContent=String(error);}
+}
+removeButton.addEventListener('click',()=>edit(()=>voxelView.remove()));
+placeButton.addEventListener('click',()=>edit(()=>voxelView.place(Number(document.querySelector('#block-type').value))));
+resetButton.addEventListener('click',()=>edit(()=>voxelView.reset()));
 let voxelView;
 voxelButton.addEventListener('click',async()=>{
   voxelButton.disabled=true;zoomIn.disabled=true;zoomOut.disabled=true;
   voxelView?.dispose();voxelView=undefined;delete voxelCanvas.dataset.rendered;
+  selectionChanged(null);resetButton.disabled=true;
   voxelResult.textContent='원본 저장소 → 메쉬 → WebGPU 화면을 생성 중입니다…';voxelResult.className='';
   try {
     voxelView=await startVoxelView(voxelCanvas,(message,ok)=>{
       voxelResult.textContent=message;voxelResult.className=ok?'pass':'fail';
-    });
+    },selectionChanged);
     zoomIn.disabled=false;zoomOut.disabled=false;
+    resetButton.disabled=false;
   } catch(error) {voxelResult.textContent=String(error);voxelResult.className='fail';}
   finally {voxelButton.disabled=false;}
 });

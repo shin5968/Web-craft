@@ -12,6 +12,7 @@ on:
       - 'web/voxel-*.mjs'
       - 'web/index.html'
       - 'tools/test_voxel.mjs'
+      - 'tools/test_voxel_edit.mjs'
       - 'tools/check_voxel_storage.mjs'
       - 'tools/browser_voxel_smoke.cjs'
       - '.github/workflows/minecraft-smoke.yml'
@@ -49,6 +50,7 @@ jobs:
       - name: Verify visible-face meshing and original storage integration
         run: |
           node tools/test_voxel.mjs
+          node tools/test_voxel_edit.mjs
           node tools/check_voxel_storage.mjs
       - name: Install browser test tools
         run: |

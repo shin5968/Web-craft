@@ -1,5 +1,6 @@
 import {loadMinecraftSmoke} from './minecraft-smoke-check.mjs';
-import {terrainFromOriginalStorage,meshVoxels} from './voxel-data.mjs';
+import {indexOf,meshVoxels} from './voxel-data.mjs';
+import {createEditableTerrain,cameraBasis,screenRay,pickVoxel} from './voxel-edit.mjs';
 
 const shader=`
 struct Camera { right:vec4f, up:vec4f, forward:vec4f, eye:vec4f, projection:vec4f }
@@ -18,10 +19,11 @@ struct Output { @builtin(position) position:vec4f, @location(0) color:vec3f }
 @fragment fn fs(in:Output)->@location(0) vec4f { return vec4f(in.color,1.0); }
 `;
 
-export async function startVoxelView(canvas,status) {
+export async function startVoxelView(canvas,status,onSelection=()=>{}) {
   if(!navigator.gpu) throw new Error('WebGPU를 사용할 수 없습니다.');
   const app=await loadMinecraftSmoke();
-  const mesh=meshVoxels(terrainFromOriginalStorage(app.exports));
+  const terrain=createEditableTerrain(app.exports);
+  let selected=null,mesh=meshVoxels(terrain.values);
   const adapter=await navigator.gpu.requestAdapter();
   if(!adapter) throw new Error('WebGPU 어댑터가 없습니다.');
   const device=await adapter.requestDevice();
@@ -30,7 +32,7 @@ export async function startVoxelView(canvas,status) {
   let depth,vertex,uniform,observer,raf=0,disposed=false;
   const pointers=new Map();
   let yaw=.75,pitch=.55,distance=34;
-  const report=()=>`${mesh.blocks}블록 · ${mesh.faces}노출 면 · 원본 저장소 4096개 값 일치 · WebGPU 렌더링 성공`;
+  const report=()=>`${mesh.blocks}블록 · ${mesh.faces}노출 면 · 원본 저장소 4096개 값 일치 · 수정 ${terrain.edits}회 · WebGPU 렌더링 성공`;
   const fail=error=>{canvas.dataset.rendered='error';status(String(error),false);};
   const draw=()=>{
     raf=0;
@@ -43,10 +45,7 @@ export async function startVoxelView(canvas,status) {
         depth?.destroy();canvas.width=width;canvas.height=height;
         depth=device.createTexture({size:[width,height],format:'depth24plus',usage:GPUTextureUsage.RENDER_ATTACHMENT});
       }
-      const eye=[Math.sin(yaw)*Math.cos(pitch)*distance,Math.sin(pitch)*distance,Math.cos(yaw)*Math.cos(pitch)*distance];
-      const forward=eye.map(v=>-v/distance);
-      const right=[Math.cos(yaw),0,-Math.sin(yaw)];
-      const up=[-Math.sin(yaw)*Math.sin(pitch),Math.cos(pitch),-Math.cos(yaw)*Math.sin(pitch)];
+      const {eye,forward,right,up}=cameraBasis(yaw,pitch,distance);
       const f=1/Math.tan(Math.PI/8),near=.1,far=150;
       device.queue.writeBuffer(uniform,0,new Float32Array([
         ...right,0,...up,0,...forward,0,...eye,0,f*height/width,f,far/(far-near),-far*near/(far-near)
@@ -60,14 +59,37 @@ export async function startVoxelView(canvas,status) {
     } catch(error) {fail(error);}
   };
   const schedule=()=>{if(!disposed&&!raf) raf=requestAnimationFrame(draw);};
-  const down=event=>{pointers.set(event.pointerId,[event.clientX,event.clientY]);canvas.setPointerCapture(event.pointerId);};
+  function rebuild() {
+    mesh=meshVoxels(terrain.values,selected?indexOf(selected.x,selected.y,selected.z):-1);
+    const next=device.createBuffer({size:Math.max(24,mesh.vertices.byteLength),usage:GPUBufferUsage.VERTEX|GPUBufferUsage.COPY_DST});
+    if(mesh.vertices.byteLength)device.queue.writeBuffer(next,0,mesh.vertices);
+    vertex?.destroy();vertex=next;
+    canvas.dataset.blocks=String(mesh.blocks);canvas.dataset.edits=String(terrain.edits);
+    canvas.dataset.selection=JSON.stringify(selected);
+    onSelection(selected);status(report(),true);schedule();
+  }
+  const down=event=>{
+    for(const state of pointers.values())state.moved=true;
+    pointers.set(event.pointerId,{x:event.clientX,y:event.clientY,startX:event.clientX,startY:event.clientY,moved:pointers.size>0});
+    canvas.setPointerCapture(event.pointerId);
+  };
   const move=event=>{
     const old=pointers.get(event.pointerId);if(!old)return;
-    yaw-=(event.clientX-old[0])*.008;
-    pitch=Math.max(.12,Math.min(1.4,pitch+(event.clientY-old[1])*.008));
-    pointers.set(event.pointerId,[event.clientX,event.clientY]);schedule();
+    if(Math.hypot(event.clientX-old.startX,event.clientY-old.startY)>8)old.moved=true;
+    if(old.moved){
+      yaw-=(event.clientX-old.x)*.008;
+      pitch=Math.max(.12,Math.min(1.4,pitch+(event.clientY-old.y)*.008));schedule();
+    }
+    old.x=event.clientX;old.y=event.clientY;
   };
-  const end=event=>pointers.delete(event.pointerId);
+  const end=event=>{
+    const old=pointers.get(event.pointerId);pointers.delete(event.pointerId);
+    if(!old||old.moved||event.type==='pointercancel'||Math.hypot(event.clientX-old.startX,event.clientY-old.startY)>8)return;
+    const rect=canvas.getBoundingClientRect();
+    const ray=screenRay(2*(event.clientX-rect.left)/rect.width-1,1-2*(event.clientY-rect.top)/rect.height,
+      canvas.width/canvas.height,cameraBasis(yaw,pitch,distance));
+    selected=pickVoxel(terrain.values,ray.origin,ray.direction);rebuild();
+  };
   function dispose() {
     if(disposed)return;
     disposed=true;cancelAnimationFrame(raf);observer?.disconnect();
@@ -104,7 +126,12 @@ export async function startVoxelView(canvas,status) {
     observer=new ResizeObserver(schedule);observer.observe(canvas);
     canvas.addEventListener('pointerdown',down);canvas.addEventListener('pointermove',move);
     canvas.addEventListener('pointerup',end);canvas.addEventListener('pointercancel',end);
-    canvas.dataset.rendered='true';status(report(),true);
-    return {dispose,zoom(amount){distance=Math.max(18,Math.min(65,distance+amount));schedule();}};
+    canvas.dataset.rendered='true';canvas.dataset.blocks=String(mesh.blocks);canvas.dataset.edits='0';canvas.dataset.selection='null';onSelection(null);status(report(),true);
+    return {dispose,
+      zoom(amount){distance=Math.max(18,Math.min(65,distance+amount));schedule();},
+      remove(){terrain.remove(selected);selected=null;rebuild();},
+      place(id){terrain.place(selected,id);selected=null;rebuild();},
+      reset(){terrain.reset();selected=null;rebuild();}
+    };
   } catch(error) {dispose();throw error;}
 }

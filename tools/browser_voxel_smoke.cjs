@@ -30,13 +30,36 @@ const {mkdirSync}=require('node:fs');
     await page.waitForTimeout(200);
     const after=await canvas.screenshot();
     if(before.equals(after))throw new Error('Camera drag did not change the rendered canvas');
+    if(!(await page.locator('#block-remove').isDisabled()))throw new Error('Dragging unexpectedly selected a block');
     await page.locator('#zoom-in').click();await page.waitForTimeout(100);
     await page.locator('#run').click();
     await page.waitForFunction(()=>!document.querySelector('#run').disabled);
     if(await canvas.getAttribute('data-rendered')!=='true')throw new Error('Diagnostic canvas interfered with terrain canvas');
+    const initialBlocks=Number(await canvas.getAttribute('data-blocks'));
+    async function selectTop() {
+      for(const fy of [.45,.35,.55,.25,.65])for(const fx of [.5,.4,.6,.3,.7]) {
+        const size=await canvas.evaluate(c=>({w:c.clientWidth,h:c.clientHeight}));
+        await canvas.click({position:{x:size.w*fx,y:size.h*fy}});
+        const hit=JSON.parse(await canvas.getAttribute('data-selection')||'null');
+        if(hit&&hit.normal[1]===1&&hit.y<15)return;
+      }
+      throw new Error('No selectable top face found');
+    }
+    await selectTop();await page.locator('#block-remove').click();
+    await page.waitForFunction(expected=>Number(document.querySelector('#voxel-canvas').dataset.blocks)===expected,initialBlocks-1);
+    // This diagnostic uses the same Wasm exports; subsequent edits must keep scene state.
+    await page.locator('#storage-run').click();
+    await page.waitForFunction(()=>!document.querySelector('#storage-run').disabled);
+    await selectTop();await page.locator('#block-type').selectOption('3');await page.locator('#block-place').click();
+    await page.waitForFunction(expected=>Number(document.querySelector('#voxel-canvas').dataset.blocks)===expected,initialBlocks);
+    if(await canvas.getAttribute('data-edits')!=='2')throw new Error('Original storage edit count mismatch');
+    await page.locator('#terrain-reset').click();
+    if(await canvas.getAttribute('data-edits')!=='0'||Number(await canvas.getAttribute('data-blocks'))!==initialBlocks)throw new Error('Terrain reset mismatch');
+    await page.waitForTimeout(150);
+    if(await canvas.getAttribute('data-rendered')!=='true')throw new Error('GPU error after terrain editing');
     if(errors.length)throw new Error(errors.join('\n'));
     mkdirSync('reports',{recursive:true});
     await canvas.screenshot({path:'reports/voxel-render.png'});
-    console.log(`WebGPU browser: ${text}; camera drag and separate diagnostic canvas passed`);
+    console.log(`WebGPU browser: ${text}; drag, picking, remove, place, diagnostic isolation and reset passed`);
   }finally{await browser?.close();server.kill();}
 })().catch(error=>{console.error(error);process.exitCode=1;});
