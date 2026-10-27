@@ -225,3 +225,24 @@ iPad의 새 터치 편집 동작은 사용자 실기기에서 추가 확인이 �
 이전 캔버스에 2D 모드가 있는 경우, 첫 WebGPU 컨텍스트가 null인 경우,
 반복 시작의 새 캔버스 사용을 브라우저 통합 검사에 포함했습니다.
 Safari 실기기 복구 여부는 사용자의 추가 확인이 필요합니다.
+
+
+## 사용자 iPad 캔버스 복구 확인
+
+사용자가 새 캔버스 복구 변경 후 잘 작동한다고 확인했습니다.
+
+## 실제 청크 형식 파일 가져오기
+
+이름 있는 Java NBT의 12개 payload 타입, Java modified UTF-8, MCA 섹터 헤더와
+압축 방식 1(gzip)·2(zlib)·3(raw)를 직접 작성한 브라우저 파서로 처리합니다.
+원본 JAR의 StateHolder 상수에서 id/properties, SerializableChunkData에서 sections/Y/block_states/data 필드를 확인했습니다.
+26.3 문자열 상태와 compound 상태, 빈 이름으로 감싼 문자열, 이전 Name/Properties 상태를 처리합니다.
+NBT 파서 자체는 Mojang NbtIo를 이식한 것이 아닙니다.
+
+원본 SimpleBitStorage에 NBT의 64비트 long 배열을 직접 전달하는 Java bridge를 추가했습니다.
+팔레트 인덱스 4096개를 BigInt 독립 디코더와 비교하고, 0번 상태가 비공기여도 보존합니다.
+실제 PalettedContainer·블록 레지스트리·월드 초기화는 여전히 사용하지 않습니다.
+한 섹션을 근사 색상/정육면체로 표시하며 원본 블록 이름·속성을 보관합니다.
+압축/문자열/경계/잘린 입력, 원본 long 배열 입력, 브라우저 파일 선택→표시 경로를 합성 MCA/NBT로 검사합니다.
+실제 26.3 게임에서 저장한 사용자 월드 파일은 아직 제공되지 않아 검증하지 않았습니다.
+LZ4, 외부 .mcc, 구형 BlockStates 형식, 투명성·실제 블록 모델·파일 쓰기는 미지원입니다.

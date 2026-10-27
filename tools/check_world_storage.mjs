@@ -1,0 +1,38 @@
+import {readFileSync} from 'node:fs';
+import vm from 'node:vm';
+import {fileURLToPath} from 'node:url';
+import assert from 'node:assert/strict';
+import {fixtureNBT} from './world-fixture.mjs';
+import {readNBT,chunkSections,decodeSection} from '../web/world-data.mjs';
+import {terrainValues,meshVoxels} from '../web/voxel-data.mjs';
+import {createEditableTerrain,pickVoxel} from '../web/voxel-edit.mjs';
+const root=new URL('../web/minecraft-smoke/',import.meta.url),runtime=new URL('classes.wasm-runtime.js',root);
+vm.runInThisContext(readFileSync(runtime,'utf8'),{filename:fileURLToPath(runtime)});
+const app=await globalThis.TeaVM.wasmGC.load(new Uint8Array(readFileSync(new URL('classes.wasm',root))));
+app.exports.main([]);
+let cases=0;
+for(const count of [1,2,5,17,33,257,4096]) {
+  const palette=Array.from({length:count},(_,i)=>i===0?'minecraft:stone':`test:block_${i}`);
+  const indices=Int32Array.from({length:4096},(_,i)=>(i*31+7)%count);
+  const section=chunkSections(readNBT(fixtureNBT(palette,indices)).root)[0].section;
+  const decoded=decodeSection(section,app.exports);
+  for(let i=0;i<4096;i++)assert.equal(decoded.values[i],indices[i]+1);
+  assert.equal(meshVoxels(decoded.values,-1,decoded.palette).blocks,4096);
+  cases++;
+}
+const section=chunkSections(readNBT(fixtureNBT()).root)[0].section,decoded=decodeSection(section,app.exports),expected=terrainValues();
+for(let i=0;i<4096;i++)assert.equal(decoded.values[i],expected[i]===0?0:expected[i]+1);
+assert.equal(decoded.sourcePalette[1].properties.snowy,'false');
+const terrain=createEditableTerrain(app.exports);terrain.loadSection(decoded,'Imported fixture');
+assert.equal(meshVoxels(terrain.values,-1,terrain.palette).blocks,1664);
+const hit=pickVoxel(terrain.values,[.5,40,.5],[0,-1,0]);terrain.remove(hit);
+const lower=pickVoxel(terrain.values,[.5,40,.5],[0,-1,0]);terrain.place(lower,1);
+const index=hit.x+16*(hit.z+16*hit.y);
+assert.equal(terrain.palette[terrain.values[index]].name,'minecraft:grass_block');
+assert.deepEqual(terrain.palette[terrain.values[index]].properties,{});
+terrain.reset();assert.deepEqual(terrain.values,decoded.values);
+assert.equal(Object.keys(terrain.palette).length,Object.keys(decoded.palette).length);
+const invalid={...section,block_states:{...section.block_states,data:[0n]}};assert.throws(()=>decodeSection(invalid,app.exports));
+const invalidIndex={...section,block_states:{...section.block_states,data:[...section.block_states.data]}};
+invalidIndex.block_states.data[0]=15n;assert.throws(()=>decodeSection(invalidIndex,app.exports));
+console.log(`NBT → original raw-long constructor: ${cases+1} palette cases, 4096 indices each; non-air index zero and imported reset passed`);

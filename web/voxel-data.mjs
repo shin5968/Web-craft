@@ -33,7 +33,7 @@ const faces=[
 ];
 const colors={1:[.3,.68,.32],2:[.48,.29,.16],3:[.48,.53,.59],4:[.86,.76,.48]};
 
-export function meshVoxels(values,selectedIndex=-1) {
+export function meshVoxels(values,selectedIndex=-1,palette=null) {
   if(values.length!==SIDE**3) throw new Error('Expected one 16³ section');
   const vertices=[];
   let blocks=0,faceCount=0;
@@ -41,11 +41,13 @@ export function meshVoxels(values,selectedIndex=-1) {
   for(let y=0;y<SIDE;y++) for(let z=0;z<SIDE;z++) for(let x=0;x<SIDE;x++) {
     const id=at(x,y,z);
     if(!id) continue;
-    if(!colors[id]) throw new Error(`Unknown test palette ID ${id}`);
+    if(palette?!palette[id]:!colors[id]) throw new Error(`Unknown palette ID ${id}`);
     blocks++;
     for(const face of faces) {
       if(at(x+face.n[0],y+face.n[1],z+face.n[2])) continue;
-      const base=indexOf(x,y,z)===selectedIndex?[1,.85,.2]:colors[id===1&&face.n[1]!==1?2:id];
+      const material=palette?.[id];
+      const base=indexOf(x,y,z)===selectedIndex?[1,.85,.2]:material?
+        (face.n[1]!==1&&material.sideColor?material.sideColor:material.color):colors[id===1&&face.n[1]!==1?2:id];
       for(const i of [0,1,2,0,2,3]) {
         const corner=face.v[i];
         vertices.push(x+corner[0]-8,y+corner[1]-5,z+corner[2]-8,

@@ -11,6 +11,29 @@ import org.teavm.jso.JSExport;
 public final class MinecraftSmoke {
     private static BitStorage storage;
     private static BitStorage snapshot;
+    private static long[] rawInput;
+    private static int rawBits;
+    private static int rawSize;
+
+    @JSExport
+    public static void storageRawBegin(int bits, int size, int words) {
+        if (bits < 1 || bits > 32 || size != 4096 || words != (size + 64 / bits - 1) / (64 / bits)) {
+            throw new IllegalArgumentException("Invalid section storage dimensions");
+        }
+        rawBits = bits; rawSize = size; rawInput = new long[words];
+    }
+
+    @JSExport
+    public static void storageRawWord(int index, int low, int high) {
+        rawInput[index] = ((long) high << 32) | Integer.toUnsignedLong(low);
+    }
+
+    @JSExport
+    public static void storageRawFinish() {
+        if (rawInput == null) throw new IllegalStateException("No section data");
+        storage = new SimpleBitStorage(rawBits, rawSize, rawInput);
+        rawInput = null;
+    }
 
     @JSExport
     public static void storageInit(int bits, int size) {

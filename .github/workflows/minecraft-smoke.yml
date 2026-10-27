@@ -11,11 +11,15 @@ on:
       - 'tools/check_bit_storage.mjs'
       - 'web/voxel-*.mjs'
       - 'web/canvas-surface.mjs'
+      - 'web/world-*.mjs'
       - 'web/index.html'
       - 'tools/test_voxel.mjs'
       - 'tools/test_voxel_edit.mjs'
       - 'tools/check_voxel_storage.mjs'
       - 'tools/browser_voxel_smoke.cjs'
+      - 'tools/world-fixture.mjs'
+      - 'tools/test_world_data.mjs'
+      - 'tools/check_world_storage.mjs'
       - '.github/workflows/minecraft-smoke.yml'
   workflow_dispatch:
 permissions:
@@ -53,6 +57,8 @@ jobs:
           node tools/test_voxel.mjs
           node tools/test_voxel_edit.mjs
           node tools/check_voxel_storage.mjs
+          node tools/test_world_data.mjs
+          node tools/check_world_storage.mjs
       - name: Install browser test tools
         run: |
           npm install --prefix "$RUNNER_TEMP/webcraft-browser" --no-package-lock --no-audit --no-fund --fetch-retries=1 --fetch-timeout=30000 playwright@1.56.1

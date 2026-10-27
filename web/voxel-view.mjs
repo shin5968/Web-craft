@@ -33,7 +33,7 @@ export async function startVoxelView(canvas,status,onSelection=()=>{},preparedCo
   let depth,vertex,uniform,observer,raf=0,disposed=false;
   const pointers=new Map();
   let yaw=.75,pitch=.55,distance=34;
-  const report=()=>`${mesh.blocks}블록 · ${mesh.faces}노출 면 · 원본 저장소 4096개 값 일치 · 수정 ${terrain.edits}회 · WebGPU 렌더링 성공`;
+  const report=()=>`${terrain.source} · ${mesh.blocks}블록 · ${mesh.faces}노출 면 · 원본 저장소 4096개 값 일치 · 수정 ${terrain.edits}회 · WebGPU 렌더링 성공`;
   const fail=error=>{canvas.dataset.rendered='error';status(String(error),false);};
   const draw=()=>{
     raf=0;
@@ -63,7 +63,7 @@ export async function startVoxelView(canvas,status,onSelection=()=>{},preparedCo
   };
   const schedule=()=>{if(!disposed&&!raf) raf=requestAnimationFrame(draw);};
   function rebuild() {
-    mesh=meshVoxels(terrain.values,selected?indexOf(selected.x,selected.y,selected.z):-1);
+    mesh=meshVoxels(terrain.values,selected?indexOf(selected.x,selected.y,selected.z):-1,terrain.palette);
     const next=device.createBuffer({size:Math.max(24,mesh.vertices.byteLength),usage:GPUBufferUsage.VERTEX|GPUBufferUsage.COPY_DST});
     if(mesh.vertices.byteLength)device.queue.writeBuffer(next,0,mesh.vertices);
     vertex?.destroy();vertex=next;
@@ -91,7 +91,9 @@ export async function startVoxelView(canvas,status,onSelection=()=>{},preparedCo
     const rect=canvas.getBoundingClientRect();
     const ray=screenRay(2*(event.clientX-rect.left)/rect.width-1,1-2*(event.clientY-rect.top)/rect.height,
       canvas.width/canvas.height,cameraBasis(yaw,pitch,distance));
-    selected=pickVoxel(terrain.values,ray.origin,ray.direction);rebuild();
+    selected=pickVoxel(terrain.values,ray.origin,ray.direction);
+    if(selected)selected.blockName=terrain.palette?.[terrain.values[indexOf(selected.x,selected.y,selected.z)]]?.name;
+    rebuild();
   };
   function dispose() {
     if(disposed)return;
@@ -135,7 +137,8 @@ export async function startVoxelView(canvas,status,onSelection=()=>{},preparedCo
       zoom(amount){distance=Math.max(18,Math.min(65,distance+amount));schedule();},
       remove(){terrain.remove(selected);selected=null;rebuild();},
       place(id){terrain.place(selected,id);selected=null;rebuild();},
-      reset(){terrain.reset();selected=null;rebuild();}
+      reset(){terrain.reset();selected=null;rebuild();},
+      loadSection(section,label){terrain.loadSection(section,label);selected=null;rebuild();}
     };
   } catch(error) {dispose();throw error;}
 }

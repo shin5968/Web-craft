@@ -29,6 +29,18 @@
 <p id="storage-result" aria-live="polite">원본 SimpleBitStorage에 합성 블록 인덱스를 넣어 읽기·쓰기·복사·64비트 압축을 검사합니다. 실제 월드 로딩은 아닙니다.</p>
 <section aria-label="테스트 청크 렌더링">
 <h2>16×16×16 테스트 지형</h2>
+<details>
+<summary>실제 월드 파일에서 섹션 읽기</summary>
+<p>Java 에디션 월드의 region 폴더 안 .mca 또는 단일 청크 .nbt 파일을 고르세요. 브라우저 안에서 읽으며 업로드하지 않습니다. 한 번에 섹션 하나만 표시합니다. 원본 NBT 읽기는 직접 작성한 코드이며 블록 데이터 디코딩에는 원본 SimpleBitStorage를 사용합니다.</p>
+<label>파일 <input id="world-file" type="file" accept=".mca,.nbt,.dat"></label>
+<div class="voxel-controls">
+<label>청크 <select id="world-chunk" disabled></select></label>
+<label>섹션 <select id="world-section" disabled></select></label>
+<button id="world-load" disabled>선택한 파일 섹션 표시</button>
+</div>
+<p id="world-result" aria-live="polite">원본 파일은 수정하지 않습니다. 편집은 메모리에만 적용됩니다. LZ4·외부 .mcc 청크·구형 BlockStates 데이터는 아직 지원하지 않습니다.</p>
+<details><summary>읽은 팔레트 보기</summary><pre id="world-palette" style="white-space:pre-wrap;overflow-wrap:anywhere"></pre></details>
+</details>
 <p>테스트 블록 인덱스를 Minecraft 원본 비트 저장소에 넣고 다시 읽어 WebGPU로 표시합니다. 지형 생성·색상·렌더러는 직접 작성한 실험 코드이며 실제 Minecraft 월드가 아닙니다.</p>
 <div class="voxel-controls">
 <button id="voxel-run">테스트 청크 표시</button>
@@ -52,6 +64,7 @@ import {runMinecraftSmoke,loadMinecraftSmoke} from './minecraft-smoke-check.mjs'
 import {verifyBitStorage} from './bit-storage-check.mjs';
 import {startVoxelView} from './voxel-view.mjs';
 import {freshGpuSurface} from './canvas-surface.mjs';
+import {mountWorldImport} from './world-import.mjs';
 const voxelButton=document.querySelector('#voxel-run');
 let voxelCanvas=document.querySelector('#voxel-canvas');
 const voxelResult=document.querySelector('#voxel-result');
@@ -60,7 +73,7 @@ const removeButton=document.querySelector('#block-remove'),placeButton=document.
 const resetButton=document.querySelector('#terrain-reset'),selectionResult=document.querySelector('#selection-result');
 function selectionChanged(hit) {
   removeButton.disabled=!hit;placeButton.disabled=!hit;
-  selectionResult.textContent=hit?`선택: (${hit.x}, ${hit.y}, ${hit.z}) · 선택 면 옆 빈 공간에 설치합니다.`:'짧게 탭: 블록 선택 · 드래그: 회전. 노란색으로 선택한 뒤 파괴 또는 설치를 누르세요.';
+  selectionResult.textContent=hit?`섹션 내부 선택: (${hit.x}, ${hit.y}, ${hit.z}) ${hit.blockName||''} · 선택 면 옆 빈 공간에 설치합니다.`:'짧게 탭: 블록 선택 · 드래그: 회전. 노란색으로 선택한 뒤 파괴 또는 설치를 누르세요.';
 }
 function edit(action) {
   try {action();}catch(error){selectionResult.textContent=String(error);}
@@ -68,8 +81,12 @@ function edit(action) {
 removeButton.addEventListener('click',()=>edit(()=>voxelView.remove()));
 placeButton.addEventListener('click',()=>edit(()=>voxelView.place(Number(document.querySelector('#block-type').value))));
 resetButton.addEventListener('click',()=>edit(()=>voxelView.reset()));
-let voxelView;
-voxelButton.addEventListener('click',async()=>{
+let voxelView,voxelStart;
+function showVoxelView(){
+  if(!voxelStart)voxelStart=startVoxelViewSession().finally(()=>{voxelStart=undefined;});
+  return voxelStart;
+}
+async function startVoxelViewSession(){
   voxelButton.disabled=true;zoomIn.disabled=true;zoomOut.disabled=true;
   voxelView?.dispose();voxelView=undefined;delete voxelCanvas.dataset.rendered;
   selectionChanged(null);resetButton.disabled=true;
@@ -84,7 +101,10 @@ voxelButton.addEventListener('click',async()=>{
     resetButton.disabled=false;
   } catch(error) {voxelResult.textContent=String(error);voxelResult.className='fail';}
   finally {voxelButton.disabled=false;}
-});
+  return voxelView;
+}
+voxelButton.addEventListener('click',showVoxelView);
+mountWorldImport(async()=>voxelView||await showVoxelView());
 zoomIn.addEventListener('click',()=>voxelView?.zoom(-3));
 zoomOut.addEventListener('click',()=>voxelView?.zoom(3));
 window.addEventListener('pagehide',()=>{
