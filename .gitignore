@@ -5,3 +5,5 @@ reports/
 assets/
 saves/
 .env
+java-smoke/target/
+web/java-smoke/

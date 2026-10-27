@@ -19,10 +19,22 @@
 <h1>Web-craft</h1>
 <p>iPad 등에서 최신 Minecraft Java 에디션의 브라우저 이식 가능성을 확인하는 환경 진단입니다. HTTPS로 접속해 주세요. 게임이나 Java 실행 환경은 아직 포함하지 않습니다.</p>
 <button id="run">환경 검사 시작</button>
+<button id="java-run">Java 실행 검사</button>
+<p id="java-result" aria-live="polite">Java 실행 검사는 빌드 artifact 전체를 배포한 페이지에서 사용할 수 있습니다.</p>
 <dl id="results" aria-live="polite"><dt>상태</dt><dd>검사를 시작해 주세요.</dd></dl>
 <canvas id="canvas" width="640" height="120" aria-label="WebGPU 단색 렌더링 검사"></canvas>
 <script type="module">
 import {checkGC, checkSharedMemory} from './runtime-probes.mjs';
+import {runJavaSmoke} from './java-smoke-check.mjs';
+const javaButton = document.querySelector('#java-run');
+const javaResult = document.querySelector('#java-result');
+javaButton.addEventListener('click', async () => {
+  javaButton.disabled = true; javaResult.className = '';
+  javaResult.textContent = 'Java Wasm 모듈을 불러오고 실행 중입니다…';
+  try { javaResult.textContent = await runJavaSmoke(); javaResult.className = 'pass'; }
+  catch (error) { javaResult.textContent = String(error); javaResult.className = 'fail'; }
+  finally { javaButton.disabled = false; }
+});
 const button = document.querySelector('#run');
 const results = document.querySelector('#results');
 let device;
@@ -48,7 +60,7 @@ button.addEventListener('click', async () => {
       const shared = await checkSharedMemory();
       row('공유 메모리 실행', shared.message, shared.ok);
     } catch (error) { row('공유 메모리 실행', String(error), false); }
-    row('Java 실행', '미구현: 위 검사는 Java 25 또는 Minecraft 실행 검증이 아닙니다.');
+    row('Java 실행', '별도의 Java 실행 검사 버튼으로 확인하세요. Minecraft 실행은 미구현입니다.');
     if (!navigator.gpu) { row('WebGPU', '사용 불가: 브라우저 설정과 HTTPS/localhost를 확인하세요.', false); return; }
     const adapter = await navigator.gpu.requestAdapter();
     if (!adapter) { row('WebGPU 어댑터', '선택 가능한 어댑터가 없습니다.', false); return; }

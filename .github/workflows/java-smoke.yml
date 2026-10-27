@@ -1,0 +1,47 @@
+name: Build Java Wasm GC smoke
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'java-smoke/**'
+      - 'web/**'
+      - 'tools/check_java_smoke.mjs'
+      - '.github/workflows/java-smoke.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+          cache-dependency-path: java-smoke/pom.xml
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Compile Java 25 class files to Wasm GC
+        run: mvn -B -f java-smoke/pom.xml package
+      - name: Verify emitted class version
+        run: |
+          python3 - <<'PY'
+          import struct
+          from pathlib import Path
+          major = struct.unpack('>H', Path('java-smoke/target/classes/dev/webcraft/Smoke.class').read_bytes()[6:8])[0]
+          assert major == 69, major
+          print('Confirmed Java 25 class format:', major)
+          PY
+      - name: Execute generated Java Wasm in Node
+        run: node tools/check_java_smoke.mjs
+      - name: Upload complete browser test site
+        uses: actions/upload-artifact@v4
+        with:
+          name: java-smoke-site
+          path: web/
+          retention-days: 14
+          if-no-files-found: error

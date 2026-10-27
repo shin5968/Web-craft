@@ -1,8 +1,8 @@
 # Web-craft
 
 최신 Minecraft Java 에디션의 브라우저 이식 가능성을 검증하는 실험 저장소입니다.
-현재는 **JAR 정적 분석 도구와 브라우저 기능 진단 페이지**만 제공합니다.
-Minecraft 실행, Java 25 웹 런타임, TeaVM 변환, 청크 렌더러는 구현하지 않았습니다.
+현재는 **JAR 정적 분석 도구, 브라우저 기능 진단 페이지, 작은 Java 프로그램의 Wasm GC 빌드 실험**을 제공합니다.
+Minecraft 실행, 완전한 Java 25 웹 런타임, 게임 코드의 TeaVM 변환, 청크 렌더러는 구현하지 않았습니다.
 
 ## JAR 분석
 
@@ -72,3 +72,25 @@ python3 -m unittest discover -s tools -v
 
 합성 클래스 파일로 메타데이터 추출, 손상 파일 처리, CLI 보고서와 종료 코드를 확인합니다.
 실제 Minecraft JAR이나 iPad GPU 검증을 대체하지는 않습니다.
+
+
+## Java → Wasm GC 실행 실험
+
+Actions의 **Build Java Wasm GC smoke**가 Temurin JDK 25로 원본 테스트 코드를 컴파일한 뒤
+클래스 형식 69를 확인하고 TeaVM 0.16.0으로 Wasm GC를 생성합니다.
+Node.js에서 객체·배열 체크섬 6건과 예외 처리를 검증한 후 `java-smoke-site` artifact를 제공합니다.
+
+아이패드에서 실행하려면 이 artifact를 압축 해제한 **전체 내용**을 현재 HTTPS 호스팅에 배포하고,
+페이지의 **Java 실행 검사** 버튼을 누르세요. 생성 파일은 소스 저장소에 커밋하지 않습니다.
+`web` 소스만 배포하면 Java Wasm과 runtime 파일이 없어서 안내 오류가 표시됩니다.
+자동 호스팅 배포는 이 워크플로에 포함하지 않습니다.
+
+개발 환경에서는 JDK 25와 Maven으로 다음을 실행합니다.
+
+```bash
+mvn -B -f java-smoke/pom.xml package
+node tools/check_java_smoke.mjs
+```
+
+이 실험은 직접 작성한 작은 Java 코드의 class 69 → Wasm GC 경로를 확인합니다.
+Minecraft 클래스·모드·JNI·Java 25 전체 표준 API의 지원을 뜻하지 않습니다.
