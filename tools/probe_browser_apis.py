@@ -134,6 +134,7 @@ def main():
         classes=DIRECTORY/'unit-classes';classes.mkdir(exist_ok=True)
         sources=list((ROOT/'browser-compat/src/main/java').rglob('*.java'))+list((ROOT/'browser-compat/src/test/java').rglob('*.java'))+[unit_generated]
         require(['javac','--release','25','-d',classes,*sources],'compile-unit')
+        require(['java','-cp',toolcp+os.pathsep+str(classes),'PortBrowserApis','--self-test'],'legacy-frame-check')
         unitjar=DIRECTORY/'unit.jar';require(['jar','--create','--file',unitjar,'-C',classes,'.'],'jar-unit')
         unit_items=[artifact('api-unit',unitjar),*fixtures]
         cp=os.pathsep.join(item['path'] for item in unit_items)

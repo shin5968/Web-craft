@@ -53,7 +53,7 @@ public final class PortBrowserApis implements Opcodes {
         ClassVisitor bridge=new ClassVisitor(ASM9,mapped){
             String className;String sourceFile;
             public void visitSource(String source,String debug){sourceFile=source;super.visitSource(source,debug);}
-            public void visit(int v,int a,String n,String s,String p,String[] i){className=n;super.visit(v,a,n,s,p,i);}
+            public void visit(int v,int a,String n,String s,String p,String[] i){className=n;super.visit((v&0xffff)<V1_5?V1_5:v,a,n,s,p,i);}
             public MethodVisitor visitMethod(int access,String name,String descriptor,String signature,String[] exceptions){
                 MethodVisitor destination=super.visitMethod(access,name,descriptor,signature,exceptions);
                 return new AdviceAdapter(ASM9,destination,access,name,descriptor){
@@ -94,7 +94,20 @@ public final class PortBrowserApis implements Opcodes {
         };
         reader.accept(bridge,ClassReader.EXPAND_FRAMES);return writer.toByteArray();
     }
+    static void legacyCheck() throws Exception {
+        ClassWriter writer=new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        String name="dev/webcraft/test/LegacyFrameFixture";
+        writer.visit(V1_4,ACC_PUBLIC,name,null,"java/lang/Object",null);
+        MethodVisitor method=writer.visitMethod(ACC_PUBLIC|ACC_STATIC,"main","([Ljava/lang/String;)V",null,null);
+        method.visitCode();method.visitFieldInsn(GETSTATIC,"java/lang/System","out","Ljava/io/PrintStream;");
+        method.visitLdcInsn("WEBCRAFT_LEGACY_FRAMES_OK");method.visitMethodInsn(INVOKEVIRTUAL,"java/io/PrintStream","println","(Ljava/lang/String;)V",false);
+        method.visitInsn(RETURN);method.visitMaxs(0,0);method.visitEnd();writer.visitEnd();
+        byte[] bytes=transform(writer.toByteArray());
+        Class<?> fixture=new ClassLoader(){Class<?> define(){return defineClass(name.replace('/','.'),bytes,0,bytes.length);}}.define();
+        fixture.getMethod("main",String[].class).invoke(null,(Object)new String[0]);
+    }
     public static void main(String[] args) throws Exception {
+        if(args.length==1&&args[0].equals("--self-test")){legacyCheck();return;}
         try(JarFile source=new JarFile(args[0]);JarOutputStream output=new JarOutputStream(Files.newOutputStream(Path.of(args[1])))){
             for(var entries=source.entries();entries.hasMoreElements();){JarEntry entry=entries.nextElement();String name=entry.getName(),upper=name.toUpperCase(Locale.ROOT);
                 if(name.equals("module-info.class")||name.endsWith("/module-info.class")||upper.startsWith("META-INF/")&&(upper.endsWith(".SF")||upper.endsWith(".RSA")||upper.endsWith(".DSA")))continue;
