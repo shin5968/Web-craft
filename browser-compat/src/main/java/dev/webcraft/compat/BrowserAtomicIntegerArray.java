@@ -4,14 +4,15 @@ import java.util.Arrays;
 /** Atomicity through one monitor; no cross-worker shared GC heap is claimed. */
 public final class BrowserAtomicIntegerArray implements Serializable {
     private final int[] values;
-    public BrowserAtomicIntegerArray(int length){values=new int[length];}
+    public BrowserAtomicIntegerArray(int length){if(length<0)throw new NegativeArraySizeException();values=new int[length];}
     public BrowserAtomicIntegerArray(int[] source){values=source.clone();}
+    private void checkIndex(int index){if(index<0||index>=values.length)throw new IndexOutOfBoundsException("Atomic array index: "+index);}
     public int length(){return values.length;}
-    @SuppressWarnings("unchecked") public synchronized int get(int index){return values[index];}
-    public synchronized void set(int index,int value){values[index]=value;}
+    @SuppressWarnings("unchecked") public synchronized int get(int index){checkIndex(index);return values[index];}
+    public synchronized void set(int index,int value){checkIndex(index);values[index]=value;}
     public void lazySet(int index,int value){set(index,value);}
     public synchronized int getAndSet(int index,int value){int old=get(index);values[index]=value;return old;}
-    public synchronized boolean compareAndSet(int index,int expected,int update){if(values[index]!=expected)return false;values[index]=update;return true;}
+    public synchronized boolean compareAndSet(int index,int expected,int update){checkIndex(index);if(values[index]!=expected)return false;values[index]=update;return true;}
     public synchronized int compareAndExchange(int index,int expected,int update){int old=get(index);if(old==expected)values[index]=update;return old;}
     public boolean weakCompareAndSet(int index,int expected,int update){return compareAndSet(index,expected,update);}
     public boolean weakCompareAndSetPlain(int index,int expected,int update){return compareAndSet(index,expected,update);}
@@ -35,8 +36,8 @@ public final class BrowserAtomicIntegerArray implements Serializable {
         int previous=get(index);for(;;){int next=function.applyAsInt(previous,value);if(compareAndSet(index,previous,next))return next;previous=get(index);}
     }
     public synchronized String toString(){return Arrays.toString(values);}
-    public synchronized int getAndAdd(int index,int delta){int old=values[index];values[index]=old+delta;return old;}
-    public synchronized int addAndGet(int index,int delta){values[index]+=delta;return values[index];}
+    public synchronized int getAndAdd(int index,int delta){checkIndex(index);int old=values[index];values[index]=old+delta;return old;}
+    public synchronized int addAndGet(int index,int delta){checkIndex(index);values[index]+=delta;checkIndex(index);return values[index];}
     public int getAndIncrement(int index){return getAndAdd(index,1);}public int getAndDecrement(int index){return getAndAdd(index,-1);}
     public int incrementAndGet(int index){return addAndGet(index,1);}public int decrementAndGet(int index){return addAndGet(index,-1);}
 }

@@ -4,14 +4,15 @@ import java.util.Arrays;
 /** Atomicity through one monitor; no cross-worker shared GC heap is claimed. */
 public final class BrowserAtomicReferenceArray<E> implements Serializable {
     private final Object[] values;
-    public BrowserAtomicReferenceArray(int length){values=new Object[length];}
+    public BrowserAtomicReferenceArray(int length){if(length<0)throw new NegativeArraySizeException();values=new Object[length];}
     public BrowserAtomicReferenceArray(E[] source){values=Arrays.copyOf(source,source.length,Object[].class);}
+    private void checkIndex(int index){if(index<0||index>=values.length)throw new IndexOutOfBoundsException("Atomic array index: "+index);}
     public int length(){return values.length;}
-    @SuppressWarnings("unchecked") public synchronized E get(int index){return (E)values[index];}
-    public synchronized void set(int index,E value){values[index]=value;}
+    @SuppressWarnings("unchecked") public synchronized E get(int index){checkIndex(index);return (E)values[index];}
+    public synchronized void set(int index,E value){checkIndex(index);values[index]=value;}
     public void lazySet(int index,E value){set(index,value);}
     public synchronized E getAndSet(int index,E value){E old=get(index);values[index]=value;return old;}
-    public synchronized boolean compareAndSet(int index,E expected,E update){if(values[index]!=expected)return false;values[index]=update;return true;}
+    public synchronized boolean compareAndSet(int index,E expected,E update){checkIndex(index);if(values[index]!=expected)return false;values[index]=update;return true;}
     public synchronized E compareAndExchange(int index,E expected,E update){E old=get(index);if(old==expected)values[index]=update;return old;}
     public boolean weakCompareAndSet(int index,E expected,E update){return compareAndSet(index,expected,update);}
     public boolean weakCompareAndSetPlain(int index,E expected,E update){return compareAndSet(index,expected,update);}
