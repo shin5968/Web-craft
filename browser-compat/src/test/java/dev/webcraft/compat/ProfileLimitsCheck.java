@@ -29,7 +29,7 @@ public final class ProfileLimitsCheck {
         BrowserConcurrentLinkedQueue<Integer> fifo=new BrowserConcurrentLinkedQueue<>();
         Thread[] workers=new Thread[2];
         for(int worker=0;worker<2;worker++){final int producer=worker;workers[worker]=new Thread(()->{
-            for(int i=0;i<2000;i++){ints.getAndIncrement(0);longs.getAndIncrement(0);refs.updateAndGet(0,value->value+1);}
+            for(int i=0;i<2000;i++){ints.getAndIncrement(0);longs.getAndIncrement(0);refs.updateAndGet(0,previous->previous+1);}
             for(int i=0;i<1000;i++)fifo.offer(producer*1000+i);
         });workers[worker].start();}
         for(Thread worker:workers)worker.join();

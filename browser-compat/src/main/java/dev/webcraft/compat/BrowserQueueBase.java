@@ -3,7 +3,7 @@ import java.util.*;
 import java.io.Serializable;
 
 /** Monitor-backed FIFO. Snapshot iterators retain node identity for remove(). */
-abstract class BrowserQueueBase<E> extends AbstractQueue<E> implements Serializable {
+public abstract class BrowserQueueBase<E> extends AbstractQueue<E> implements Serializable {
     private static final class Node<E> implements Serializable {final E value;Node(E value){this.value=value;}}
     private final LinkedList<Node<E>> nodes=new LinkedList<>();
     protected final int capacity;
