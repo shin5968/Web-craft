@@ -101,6 +101,10 @@ public final class ApiSemanticsCheck {
         try{bounded.drainTo(bounded);throw new AssertionError();}catch(IllegalArgumentException expected){checks++;}
         try{new LinkedBlockingQueue<>(0);throw new AssertionError();}catch(IllegalArgumentException expected){checks++;}
         check(!(((Object)bounded) instanceof ConcurrentLinkedQueue));
+        try{new AtomicIntegerArray((int[])null);throw new AssertionError();}catch(NullPointerException expected){checks++;}
+        try{new AtomicReferenceArray<Object>((Object[])null);throw new AssertionError();}catch(NullPointerException expected){checks++;}
+        try{ints.getAndUpdate(0,null);throw new AssertionError();}catch(NullPointerException expected){checks++;}
+        try{new AtomicLongArray(-1);throw new AssertionError();}catch(NegativeArraySizeException expected){checks++;}
         System.out.println("WEBCRAFT_APIS_OK "+checks);
     }
 }

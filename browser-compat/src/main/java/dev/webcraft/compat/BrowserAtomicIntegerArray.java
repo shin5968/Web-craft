@@ -5,7 +5,7 @@ import java.util.Arrays;
 public final class BrowserAtomicIntegerArray implements Serializable {
     private final int[] values;
     public BrowserAtomicIntegerArray(int length){if(length<0)throw new NegativeArraySizeException();values=new int[length];}
-    public BrowserAtomicIntegerArray(int[] source){values=source.clone();}
+    public BrowserAtomicIntegerArray(int[] source){java.util.Objects.requireNonNull(source);values=source.clone();}
     private void checkIndex(int index){if(index<0||index>=values.length)throw new IndexOutOfBoundsException("Atomic array index: "+index);}
     public int length(){return values.length;}
     @SuppressWarnings("unchecked") public synchronized int get(int index){checkIndex(index);return values[index];}
@@ -24,20 +24,20 @@ public final class BrowserAtomicIntegerArray implements Serializable {
     public int compareAndExchangeAcquire(int index,int expected,int update){return compareAndExchange(index,expected,update);}
     public int compareAndExchangeRelease(int index,int expected,int update){return compareAndExchange(index,expected,update);}
     public int getAndUpdate(int index,java.util.function.IntUnaryOperator function){
-        int previous=get(index);for(;;){int next=function.applyAsInt(previous);if(compareAndSet(index,previous,next))return previous;previous=get(index);}
+        int previous=get(index);java.util.Objects.requireNonNull(function);for(;;){int next=function.applyAsInt(previous);if(compareAndSet(index,previous,next))return previous;previous=get(index);}
     }
     public int updateAndGet(int index,java.util.function.IntUnaryOperator function){
-        int previous=get(index);for(;;){int next=function.applyAsInt(previous);if(compareAndSet(index,previous,next))return next;previous=get(index);}
+        int previous=get(index);java.util.Objects.requireNonNull(function);for(;;){int next=function.applyAsInt(previous);if(compareAndSet(index,previous,next))return next;previous=get(index);}
     }
     public int getAndAccumulate(int index,int value,java.util.function.IntBinaryOperator function){
-        int previous=get(index);for(;;){int next=function.applyAsInt(previous,value);if(compareAndSet(index,previous,next))return previous;previous=get(index);}
+        int previous=get(index);java.util.Objects.requireNonNull(function);for(;;){int next=function.applyAsInt(previous,value);if(compareAndSet(index,previous,next))return previous;previous=get(index);}
     }
     public int accumulateAndGet(int index,int value,java.util.function.IntBinaryOperator function){
-        int previous=get(index);for(;;){int next=function.applyAsInt(previous,value);if(compareAndSet(index,previous,next))return next;previous=get(index);}
+        int previous=get(index);java.util.Objects.requireNonNull(function);for(;;){int next=function.applyAsInt(previous,value);if(compareAndSet(index,previous,next))return next;previous=get(index);}
     }
     public synchronized String toString(){return Arrays.toString(values);}
     public synchronized int getAndAdd(int index,int delta){checkIndex(index);int old=values[index];values[index]=old+delta;return old;}
-    public synchronized int addAndGet(int index,int delta){checkIndex(index);values[index]+=delta;checkIndex(index);return values[index];}
+    public synchronized int addAndGet(int index,int delta){checkIndex(index);values[index]+=delta;return values[index];}
     public int getAndIncrement(int index){return getAndAdd(index,1);}public int getAndDecrement(int index){return getAndAdd(index,-1);}
     public int incrementAndGet(int index){return addAndGet(index,1);}public int decrementAndGet(int index){return addAndGet(index,-1);}
 }
