@@ -3,5 +3,6 @@
   <groupId>dev.webcraft</groupId><artifactId>port-transform-tools</artifactId><version>0.1.0</version>
   <dependencies>
     <dependency><groupId>org.ow2.asm</groupId><artifactId>asm-tree</artifactId><version>9.11.1</version></dependency>
+    <dependency><groupId>org.ow2.asm</groupId><artifactId>asm-commons</artifactId><version>9.11.1</version></dependency>
   </dependencies>
 </project>

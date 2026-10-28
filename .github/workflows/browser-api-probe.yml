@@ -1,0 +1,42 @@
+name: Verify browser API port and original registry
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'browser-compat/**'
+      - 'tools/java/PortBrowserApis.java'
+      - 'tools/java/pom.xml'
+      - 'tools/probe_browser_apis.py'
+      - 'tools/run_wasm_main.mjs'
+      - '.github/workflows/browser-api-probe.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compare APIs with Java 25, execute Wasm checks, then probe registry
+        run: python3 tools/probe_browser_apis.py
+      - name: Upload reports only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-api-port-report
+          path: |
+            reports/browser-api-probe/result.json
+            reports/browser-api-probe/*.log
+          retention-days: 14
+          if-no-files-found: error
