@@ -244,3 +244,5 @@ MCA에서 청크를 고른 뒤 **선택 청크 전체 높이 표시**를 누르�
 별도 시작 코드의 원본 블록 등록 검사는 `python3 tools/probe_minecraft_startup.py --target registry`로 실행합니다. Java 25 기준 실행과 같은 코드의 Wasm GC 컴파일을 분리해 기록합니다. 첫 검사는 JVM에서 1,286개 블록 등록에 성공했고 Wasm 컴파일은 공용 실행기·Java API 의존성으로 실패했습니다. 자세한 결과는 [원본 시작 코드 이식 기록](docs/startup-port.md)을 참고하세요. 아직 브라우저 게임 실행은 아닙니다.
 
 실험적 `Util` 실행기 지연 생성 이식은 `python3 tools/probe_minecraft_startup.py --target registry-lazy`로 검사합니다. 원본 실행기는 유지하고 생성 시점만 첫 사용으로 옮깁니다. JVM에서 세 풀의 실제 작업 실행·재사용과 원본/수정본의 동일 블록 등록 결과를 검증했습니다. Wasm 컴파일은 아직 실패하며 브라우저용 스레드 구현이 아닙니다. 수정 JAR은 reports 아래에만 생성하고 배포하지 않습니다.
+
+브라우저용 ScopedValue·호출 프레임 추적·재진입 잠금·번들 리소스 호환 구현과 검사는 [브라우저 API 이식 기록](docs/browser-api-port.md)에 정리했습니다. `python3 tools/probe_browser_apis.py`로 Java 25 원본과 이식 코드의 의미를 비교하고 Wasm GC에서 실행한 뒤, 원본 게임 레지스트리까지 검사합니다. API 40개 검사와 JVM 블록 등록 비교는 통과했습니다. 전체 게임의 Wasm 컴파일 성공이나 Java 작업 스레드 전체 지원을 뜻하지 않습니다.

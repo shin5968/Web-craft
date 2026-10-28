@@ -101,3 +101,7 @@ python3 tools/probe_minecraft_startup.py --target registry-lazy
 ```
 
 Next boundary: trace the ScopedValue/StackWalker context paths and the shared library lock/resource dependencies, preserving the same original-vs-port JVM checks. Required semantics must be implemented and tested, not skipped to make compiler errors disappear.
+
+## 2026-10-28 API implementation update
+
+The scoped binding, caller-frame, lock and classpath resource boundaries now have a separate compatibility implementation. Java 25 reference tests, mapped JVM execution and isolated Wasm GC execution passed 40 checks; original and ported JVM registry counts and measured IDs match. See [browser API profile, verification evidence and limits](browser-api-port.md). Complete registry Wasm compilation remains a separately measured outcome and must not be inferred from API test success.
