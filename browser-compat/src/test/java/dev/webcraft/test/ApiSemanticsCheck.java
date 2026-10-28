@@ -1,5 +1,6 @@
 package dev.webcraft.test;
 import java.lang.ScopedValue;
+import java.lang.StackWalker;
 import java.util.*;
 import java.util.concurrent.locks.*;
 import java.io.*;
@@ -10,6 +11,9 @@ import java.nio.charset.StandardCharsets;
 public final class ApiSemanticsCheck {
     private static int checks;
     static void check(boolean condition){if(!condition)throw new AssertionError("Check "+checks);checks++;}
+    private static Class<?> caller(){return StackWalker.getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE).getCallerClass();}
+    private static List<String> methods(){return StackWalker.getInstance().walk(frames->frames.limit(2).map(StackWalker.StackFrame::getMethodName).toList());}
+    private static void thrownFrame(){throw new IllegalStateException("frame cleanup");}
     public static void main(String[] args) throws Exception {
         ScopedValue<String> key=ScopedValue.newInstance(),other=ScopedValue.newInstance();
         check(!key.isBound());check(key.orElse("fallback").equals("fallback"));
@@ -46,6 +50,15 @@ public final class ApiSemanticsCheck {
         List<String> found=new ArrayList<>();while(urls.hasMoreElements()){try(InputStream stream=urls.nextElement().openStream()){found.add(new String(stream.readAllBytes(),StandardCharsets.UTF_8));}}
         check(found.equals(List.of("first","second")));
         check(ApiSemanticsCheck.class.getClassLoader().loadClass("java.lang.String")==String.class);
+        check(caller()==ApiSemanticsCheck.class);check(methods().equals(List.of("methods","main")));
+        try{thrownFrame();}catch(IllegalStateException expected){checks++;}
+        check(methods().equals(List.of("methods","main")));
+        try(InputStream stream=ClassLoader.getSystemResourceAsStream("fixtures/sample.txt")){check(stream!=null&&stream.read()==98);}
+        check(ClassLoader.getSystemResource("fixtures/sample.txt")!=null);
+        try(InputStream stream=ApiSemanticsCheck.class.getResourceAsStream("/fixtures/sample.txt")){check(stream!=null&&stream.read()==98);}
+        try(InputStream stream=ApiSemanticsCheck.class.getClassLoader().getResourceAsStream("fixtures/sample.txt")){check(stream!=null&&stream.read()==98);}
+        check(ApiSemanticsCheck.class.getClassLoader().getResource("/fixtures/sample.txt")==null);
+        check(Collections.list(ClassLoader.getSystemResources("fixtures/providers.txt")).size()==2);
         System.out.println("WEBCRAFT_APIS_OK "+checks);
     }
 }

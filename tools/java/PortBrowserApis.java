@@ -42,19 +42,42 @@ public final class PortBrowserApis implements Opcodes {
         ClassReader reader=new ClassReader(input);
         // Runtime implementation must not recursively remap its own loader bridge.
         if(reader.getClassName().startsWith(PREFIX))return input;
+        Map<String,Integer> firstLines=new HashMap<>();
+        reader.accept(new ClassVisitor(ASM9){
+            public MethodVisitor visitMethod(int a,String n,String d,String s,String[] e){return new MethodVisitor(ASM9){
+                public void visitLineNumber(int line,Label label){firstLines.putIfAbsent(n+d,line);}
+            };}
+        },ClassReader.SKIP_FRAMES);
         ClassWriter writer=new ClassWriter(ClassWriter.COMPUTE_MAXS);
         ClassVisitor mapped=new ClassRemapper(writer,remapper);
         ClassVisitor bridge=new ClassVisitor(ASM9,mapped){
-            String className;
+            String className;String sourceFile;
+            public void visitSource(String source,String debug){sourceFile=source;super.visitSource(source,debug);}
             public void visit(int v,int a,String n,String s,String p,String[] i){className=n;super.visit(v,a,n,s,p,i);}
             public MethodVisitor visitMethod(int access,String name,String descriptor,String signature,String[] exceptions){
                 MethodVisitor destination=super.visitMethod(access,name,descriptor,signature,exceptions);
-                return new MethodVisitor(ASM9,destination){
-                    public void visitCode(){super.visitCode();
+                return new AdviceAdapter(ASM9,destination,access,name,descriptor){
+                    final Label start=new Label(),end=new Label(),handler=new Label();boolean entered;
+                    protected void onMethodEnter(){
+                        // AdviceAdapter delays constructor entry until this/super initialization.
+                        mv.visitLdcInsn(Type.getObjectType(className));mv.visitLdcInsn(name);mv.visitLdcInsn(descriptor);
+                        if(sourceFile==null)mv.visitInsn(ACONST_NULL);else mv.visitLdcInsn(sourceFile);
+                        mv.visitLdcInsn(firstLines.getOrDefault(name+descriptor,-1));
+                        mv.visitMethodInsn(INVOKESTATIC,PREFIX+"BrowserFrames","enter","(Ljava/lang/Class;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;I)V",false);
+                        mv.visitLabel(start);entered=true;
+                        count("instrumented-method");
                         if(name.equals("main")&&descriptor.equals("([Ljava/lang/String;)V")&&
                                 (className.equals("dev/webcraft/browser/RegistryBootstrap")||className.equals("dev/webcraft/test/ApiSemanticsCheck"))) {
                             super.visitMethodInsn(INVOKESTATIC,PREFIX+"EmbeddedResources","install","()V",false);
                         }
+                    }
+                    protected void onMethodExit(int opcode){if(entered&&opcode!=ATHROW)mv.visitMethodInsn(INVOKESTATIC,PREFIX+"BrowserFrames","exit","()V",false);}
+                    public void visitMaxs(int stack,int locals){
+                        if(entered){mv.visitLabel(end);mv.visitTryCatchBlock(start,end,handler,null);mv.visitLabel(handler);
+                            // Handler discards locals, retaining only the thrown exception.
+                            mv.visitFrame(F_NEW,0,new Object[0],1,new Object[]{"java/lang/Throwable"});
+                            mv.visitMethodInsn(INVOKESTATIC,PREFIX+"BrowserFrames","exit","()V",false);mv.visitInsn(ATHROW);}
+                        super.visitMaxs(stack,locals);
                     }
                     public void visitMethodInsn(int opcode,String owner,String called,String desc,boolean itf){
                         if(owner.equals("com/mojang/logging/LogUtils")&&called.equals("getLogger")&&desc.equals("()Lorg/slf4j/Logger;")){
@@ -69,7 +92,7 @@ public final class PortBrowserApis implements Opcodes {
                 };
             }
         };
-        reader.accept(bridge,0);return writer.toByteArray();
+        reader.accept(bridge,ClassReader.EXPAND_FRAMES);return writer.toByteArray();
     }
     public static void main(String[] args) throws Exception {
         try(JarFile source=new JarFile(args[0]);JarOutputStream output=new JarOutputStream(Files.newOutputStream(Path.of(args[1])))){

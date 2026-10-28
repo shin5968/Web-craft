@@ -24,11 +24,11 @@ public final class BrowserResources {
     });}catch(MalformedURLException exception){throw new IllegalArgumentException(exception);}}
     public static URL getResource(ClassLoader loader,String name){return getSystemResource(name);}
     public static URL getResource(Class<?> type,String name){return getSystemResource(relative(type,name));}
-    public static URL getSystemResource(String name){name=valid(name);return DATA.containsKey(name)?url(name,0):null;}
+    public static URL getSystemResource(String name){Objects.requireNonNull(name);return DATA.containsKey(name)?url(name,0):null;}
     public static Enumeration<URL> getResources(ClassLoader loader,String name) throws IOException{return getSystemResources(name);}
-    public static Enumeration<URL> getSystemResources(String name) throws IOException {name=valid(name);List<URL> urls=new ArrayList<>();List<byte[]> values=DATA.get(name);if(values!=null)for(int i=0;i<values.size();i++)urls.add(url(name,i));return Collections.enumeration(urls);}
+    public static Enumeration<URL> getSystemResources(String name) throws IOException {Objects.requireNonNull(name);List<URL> urls=new ArrayList<>();List<byte[]> values=DATA.get(name);if(values!=null)for(int i=0;i<values.size();i++)urls.add(url(name,i));return Collections.enumeration(urls);}
     public static InputStream getResourceAsStream(ClassLoader loader,String name){return getSystemResourceAsStream(name);}
     public static InputStream getResourceAsStream(Class<?> type,String name){return getSystemResourceAsStream(relative(type,name));}
-    public static InputStream getSystemResourceAsStream(String name){name=valid(name);List<byte[]> values=DATA.get(name);return values==null?null:new ByteArrayInputStream(values.get(0));}
+    public static InputStream getSystemResourceAsStream(String name){Objects.requireNonNull(name);List<byte[]> values=DATA.get(name);return values==null?null:new ByteArrayInputStream(values.get(0));}
     public static Class<?> loadClass(ClassLoader loader,String name) throws ClassNotFoundException {Class<?> type=CLASSES.get(name);if(type==null)throw new ClassNotFoundException("Class not bundled for dynamic loading: "+name);return type;}
 }
