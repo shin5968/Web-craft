@@ -73,7 +73,7 @@ def compile_wasm(artifacts,entry,directory,name):
     directory.mkdir(parents=True,exist_ok=True)
     pom=directory/'pom.xml';pom.write_text(make_pom(artifacts,directory,entry))
     code,text=run(['mvn','-B','-ntp','-f',pom,'org.teavm:teavm-maven-plugin:0.16.0:compile',
-                   'org.teavm:teavm-maven-plugin:0.16.0:copy-webassembly-gc-runtime'],name)
+                   'org.teavm:teavm-maven-plugin:0.16.0:copy-webassembly-gc-runtime','-Dteavm.wasmGC.runtime.fileName=startup.wasm-runtime.js'],name)
     errors=[line for line in text.splitlines() if '[ERROR]' in line]
     categories={key:sum(key in line for line in errors) for key in ['java.lang.ScopedValue','java.lang.StackWalker','java.util.concurrent.locks.','ClassLoader.getResource','Class.getResource','ClassLoader.loadClass']}
     return dict(status='compiled' if code==0 else 'compile-failed',exitCode=code,

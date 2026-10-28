@@ -4,6 +4,7 @@ on:
     branches: [main]
     paths:
       - 'browser-compat/**'
+      - 'browser-bootstrap/**'
       - 'tools/java/PortBrowserApis.java'
       - 'tools/java/pom.xml'
       - 'tools/probe_browser_apis.py'

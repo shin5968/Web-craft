@@ -3,10 +3,12 @@ import java.util.NoSuchElementException;
 public final class ProfileLimitsCheck {
     public static void main(String[] args) throws Exception {
         BrowserScopedValue<String> value=BrowserScopedValue.newInstance();
+        boolean[] isolated={false};
         BrowserScopedValue.where(value,"parent").run(()->{
-            Thread thread=new Thread(()->{if(value.isBound())throw new AssertionError("Leaked scope");});
+            Thread thread=new Thread(()->{isolated[0]=!value.isBound();});
             thread.start();try{thread.join();}catch(InterruptedException error){throw new AssertionError(error);}
         });
+        if(!isolated[0])throw new AssertionError("Leaked scope");
         BrowserReentrantLock lock=new BrowserReentrantLock();lock.lock();
         boolean[] checks=new boolean[2];Thread other=new Thread(()->{checks[0]=!lock.tryLock();try{lock.lock();}catch(UnsupportedOperationException expected){checks[1]=true;}});
         other.start();other.join();if(!checks[0]||!checks[1])throw new AssertionError("Contention not explicit");

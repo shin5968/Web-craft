@@ -8,6 +8,9 @@ import net.minecraft.world.level.block.Blocks;
 /** Port entry point: original registry bootstrap, no desktop client launcher. */
 public final class RegistryBootstrap {
     public static void main(String[] args) {
+        if (!com.mojang.logging.LogUtils.getLogger().getName().equals(RegistryBootstrap.class.getName())) {
+            throw new IllegalStateException("Logger caller attribution changed");
+        }
         SharedConstants.tryDetectVersion();
         Bootstrap.bootStrap();
         int count = BuiltInRegistries.BLOCK.keySet().size();

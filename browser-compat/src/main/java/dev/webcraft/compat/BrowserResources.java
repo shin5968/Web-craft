@@ -14,6 +14,8 @@ public final class BrowserResources {
     private static String relative(Class<?> type,String name){Objects.requireNonNull(type);Objects.requireNonNull(name);
         if(name.startsWith("/"))return name.substring(1);String owner=type.getName();int dot=owner.lastIndexOf('.');return dot<0?name:owner.substring(0,dot).replace('.','/')+'/'+name;}
     private static URL url(String name,int index){try{return new URL("webcraft", "classpath", -1, "/"+name+"?entry="+index,new URLStreamHandler(){
+        protected boolean hostsEqual(URL first,URL second){return first.getHost().equals(second.getHost());}
+        protected int hashCode(URL url){return Objects.hash(url.getProtocol(),url.getHost(),url.getPath(),url.getQuery());}
         protected URLConnection openConnection(URL url){return new URLConnection(url){
             public void connect(){connected=true;}
             public InputStream getInputStream() throws IOException {List<byte[]> values=DATA.get(name);if(values==null||index>=values.size())throw new FileNotFoundException(name);connect();return new ByteArrayInputStream(values.get(index));}
