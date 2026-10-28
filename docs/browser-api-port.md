@@ -2,7 +2,11 @@
 
 This is a port of a defined execution profile, not a complete implementation of Java 25 or a JVM. `tools/probe_browser_apis.py` builds transformed copies in ignored `reports/browser-api-probe/`. The original downloaded client SHA-256 is verified before transformation. Normal Main, registry and lazy-executor probes remain separate baselines. The WebGPU viewer does not load this experimental registry port.
 
-## Latest verified outcome (2026-10-28)
+## Latest array/queue extension (2026-10-28)
+
+The [atomic array and FIFO queue implementation](atomic-queue-port.md) extends this profile. Java 25 and Node Wasm GC now pass 87 differential checks with strict Java exception checks enabled. JVM registry results remain identical (1286 blocks), and complete registry diagnostics report zero missing symbols in the scoped value, stack walking, lock, resource, atomic array and queue categories. Other APIs still prevent the game Wasm build. Evidence: https://github.com/shin5968/Web-craft/actions/runs/40619677650
+
+## Base API checkpoint (2026-10-28)
 
 Source commit: 5712868b70a9e81b8f73e6bad42f86b866153578.
 Verified workflow: https://github.com/shin5968/Web-craft/actions/runs/40611236857
