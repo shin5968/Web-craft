@@ -2,6 +2,26 @@
 
 This is a port of a defined execution profile, not a complete implementation of Java 25 or a JVM. `tools/probe_browser_apis.py` builds transformed copies in ignored `reports/browser-api-probe/`. The original downloaded client SHA-256 is verified before transformation. Normal Main, registry and lazy-executor probes remain separate baselines. The WebGPU viewer does not load this experimental registry port.
 
+## Latest verified outcome (2026-10-28)
+
+Source commit: 5712868b70a9e81b8f73e6bad42f86b866153578.
+Verified workflow: https://github.com/shin5968/Web-craft/actions/runs/40611236857
+
+| Check | Actual result |
+| --- | --- |
+| Java 25 original vs mapped JVM semantics | 46 checks passed |
+| Same mapped tests executed in Node 24 Wasm GC | 46 checks passed, compiler errors 0 |
+| Original vs mapped JVM registry | 1286 blocks; air 0, stone 1, water 37; results match |
+| Full registry compiler diagnostic collection | Completed; diagnosticsComplete=true |
+| Missing ScopedValue / StackWalker symbols | 0 / 0 |
+| Missing java.util.concurrent.locks symbols (including LockSupport) | 0 |
+| Missing ClassLoader resource/loadClass and Class resource symbols | 0 |
+| Full registry Wasm compilation | compile-failed due to other APIs |
+
+The remaining log contains 234 error lines, including duplicate reports and Maven summaries; this is not a count of 234 independent missing features. Examples include atomic array types, LinkedBlockingQueue/ConcurrentLinkedQueue, Date.from, HexFormat, Thread.setContextClassLoader, Unsafe/native library facilities and optional desktop framework dependencies. Do not confuse the successful API checks or green workflow with a successful game build. The complete compiler log is retained in the browser-api-port-report artifact for 14 days.
+
+The extra six checks cover LockSupport permits, nonaccumulating unpark behavior, zero/negative nanos, blocker bookkeeping, interrupt-preserving return and null unpark. Separate profile-limit checks ensure parking without a permit and positive timed waiting fail explicitly. These implement a non-blocking bootstrap profile; they do not implement a waiting scheduler. New compatibility Wasm was executed on Node 24, not yet on the user's iPad Safari.
+
 ## Implemented boundaries
 
 | Boundary | Behavior | Limits |
@@ -10,6 +30,7 @@ This is a port of a defined execution profile, not a complete implementation of 
 | StackWalker | Explicit instrumentation records application/library method entry and exit; walk, forEach and retained caller classes operate on snapshots | Does not expose VM, native, reflection or hidden frames; source line is method entry line; bytecode index is unknown (-1) |
 | Logger caller | Direct LogUtils.getLogger calls are lowered to LoggerFactory.getLogger with their real calling class name | General dynamic reflection does not become available through this lowering |
 | ReentrantLock | Ownership, hold counts, reentrancy, tryLock, interruption checks, correct ownership errors | Contended blocking acquisition and condition waits throw UnsupportedOperationException; no worker scheduler |
+| LockSupport | A single retained permit, unpark, permit consumption, interruption-preserving immediate return and blocker bookkeeping | Parking without a permit and positive waits need a scheduler and throw explicitly |
 | ReentrantReadWriteLock | Reader ownership/counts, writer reentrancy, downgrade, and failed read-to-write tryLock | Contended blocking/upgrade waits and write conditions require a scheduler |
 | Resources | Read-only byte streams and URLs, duplicate resource enumeration in classpath order, relative Class lookups, known provider class lookup | One bundled loader namespace; metadata only; no disk/network lookup or arbitrary dynamic class loading |
 
@@ -32,7 +53,7 @@ The `Verify browser API port and original registry` workflow runs the same comma
 
 Only logs and result.json are uploaded. Original or transformed game/library JARs and game-derived Wasm are not published.
 
-## Verified result (2026-10-28)
+## Earlier checkpoint (2026-10-28)
 
 Source/library check: https://github.com/shin5968/Web-craft/actions/runs/40609037254 (source 53eb3ffd9e60bf68bf15b16163ac8927c813700d).
 
