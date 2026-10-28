@@ -114,7 +114,7 @@ def artifact(name,path):return dict(name=name,path=str(path),sha256=hashlib.sha2
 
 def main():
     DIRECTORY.mkdir(parents=True,exist_ok=True)
-    report=dict(version=VERSION,scope='Limited synchronous browser API profile. JVM reference, isolated Wasm execution, then original registry compilation. Not a running Minecraft client.')
+    report=dict(version=VERSION,compilerStrict=True,scope='Limited synchronous browser API profile. JVM reference, isolated Wasm execution, then original registry compilation. Not a running Minecraft client.')
     try:
         report['phase']='tools'
         dependencies=DIRECTORY/'tool-dependencies'

@@ -35,7 +35,7 @@ def make_pom(artifacts, output, entry_point='net.minecraft.client.main.Main'):
     configuration = ET.SubElement(plugin, 'configuration')
     for name, text in [('mainClass',entry_point),
                        ('targetType','WEBASSEMBLY_GC'), ('targetDirectory',str(output)),
-                       ('targetFileName','startup.wasm'), ('optimizationLevel','SIMPLE')]:
+                       ('targetFileName','startup.wasm'), ('optimizationLevel','SIMPLE'), ('strict','true')]:
         value(configuration, name, text)
     return ET.tostring(project, encoding='unicode')
 
