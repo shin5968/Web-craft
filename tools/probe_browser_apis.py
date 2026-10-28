@@ -49,7 +49,7 @@ def public_class(data):
 
 
 def embedded_source(artifacts,directory,fixture_only=False):
-    resources=[];providers=set();excluded=set();total=0
+    resources=[];providers=set();excluded=set();build_only=set();total=0
     for artifact in artifacts:
         with zipfile.ZipFile(artifact['path']) as archive:
             names=set(archive.namelist())
@@ -61,6 +61,9 @@ def embedded_source(artifacts,directory,fixture_only=False):
                 data=archive.read(info);total+=len(data)
                 if total>12*1024*1024:raise ValueError('Bundled metadata exceeds 12 MiB limit')
                 resources.append((name,data))
+                if name=='META-INF/services/javax.annotation.processing.Processor':
+                    build_only.update(line.split('#',1)[0].strip() for line in data.decode('utf8').splitlines() if line.split('#',1)[0].strip())
+                    continue
                 if name.startswith('META-INF/services/'):
                     for line in data.decode('utf8').splitlines():
                         provider=line.split('#',1)[0].strip()
@@ -86,19 +89,24 @@ def embedded_source(artifacts,directory,fixture_only=False):
     source='package dev.webcraft.compat; public final class EmbeddedResources { private static boolean installed; public static synchronized void install(){if(installed)return;'
     source+=''.join('part'+str(i)+'();' for i in range(len(methods)))+'installed=true;}' + '\n'.join(methods)+'}'
     directory.mkdir(parents=True,exist_ok=True);path=directory/'EmbeddedResources.java';path.write_text(source)
-    return path,dict(resourceCount=len(resources),bytes=total,registeredProviders=sorted(providers),excludedNonPublicProviders=sorted(excluded),
+    return path,dict(resourceCount=len(resources),bytes=total,registeredProviders=sorted(providers),excludedNonPublicProviders=sorted(excluded),excludedBuildTimeProviders=sorted(build_only),
                      selection='version.json, pack.mcmeta, default translation and deprecated-key metadata, fixtures, META-INF/services, properties and XML; read-only; classpath order retained')
 
 
 def compile_wasm(artifacts,entry,directory,name):
     directory.mkdir(parents=True,exist_ok=True)
     pom=directory/'pom.xml';pom.write_text(make_pom(artifacts,directory,entry))
-    code,text=run(['mvn','-B','-ntp','-f',pom,'org.teavm:teavm-maven-plugin:0.16.0:compile',
-                   'org.teavm:teavm-maven-plugin:0.16.0:copy-webassembly-gc-runtime','-Dteavm.wasmGC.runtime.fileName=startup.wasm-runtime.js'],name)
+    timed_out=False
+    try:
+        code,text=run(['mvn','-B','-ntp','-f',pom,'org.teavm:teavm-maven-plugin:0.16.0:compile',
+                       'org.teavm:teavm-maven-plugin:0.16.0:copy-webassembly-gc-runtime','-Dteavm.wasmGC.runtime.fileName=startup.wasm-runtime.js'],name,480 if name=='registry-wasm' else 240)
+    except subprocess.TimeoutExpired:
+        timed_out=True;code=None;text=(DIRECTORY/(name+'.log')).read_text(errors='replace')
     errors=[line for line in text.splitlines() if '[ERROR]' in line]
     categories={key:sum(key in line for line in errors) for key in ['java.lang.ScopedValue','java.lang.StackWalker','java.util.concurrent.locks.','ClassLoader.getResource','Class.getResource','ClassLoader.loadClass']}
-    return dict(status='compiled' if code==0 else 'compile-failed',exitCode=code,
-                errorLineCount=len(errors),requestedApiDiagnostics=categories,diagnostics=errors[:200])
+    complete=not timed_out and code not in (137,-9) and 'OutOfMemoryError' not in text
+    return dict(status='timeout' if timed_out else ('compiled' if code==0 else 'compile-failed'),exitCode=code,
+                diagnosticsComplete=complete,errorLineCount=len(errors),requestedApiDiagnostics=categories if complete else None,diagnostics=errors[:200])
 
 
 def artifact(name,path):return dict(name=name,path=str(path),sha256=hashlib.sha256(path.read_bytes()).hexdigest())
