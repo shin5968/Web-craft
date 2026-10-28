@@ -3,6 +3,8 @@ import java.lang.ScopedValue;
 import java.lang.StackWalker;
 import java.util.*;
 import java.util.concurrent.locks.*;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.*;
 import java.io.*;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
@@ -65,6 +67,40 @@ public final class ApiSemanticsCheck {
         Object blocker=new Object();LockSupport.setCurrentBlocker(blocker);check(LockSupport.getBlocker(Thread.currentThread())==blocker);LockSupport.setCurrentBlocker(null);
         Thread.currentThread().interrupt();LockSupport.park();check(Thread.interrupted());
         LockSupport.unpark(null);checks++;
+        int[] input={Integer.MAX_VALUE,7};AtomicIntegerArray ints=new AtomicIntegerArray(input);input[1]=99;
+        check(ints.get(1)==7&&ints.length()==2);check(ints.incrementAndGet(0)==Integer.MIN_VALUE);
+        check(ints.getAndAdd(1,5)==7&&ints.get(1)==12);check(!ints.compareAndSet(1,7,9));
+        check(ints.compareAndExchange(1,12,20)==12&&ints.get(1)==20);
+        check(ints.getAndUpdate(1,value->value+3)==20&&ints.updateAndGet(1,value->value*2)==46);
+        check(ints.getAndAccumulate(1,4,Integer::sum)==46&&ints.accumulateAndGet(1,5,Integer::sum)==55);
+        ints.setRelease(1,60);check(ints.getAcquire(1)==60);ints.setOpaque(1,61);check(ints.getPlain(1)==61);
+        try{ints.get(2);throw new AssertionError();}catch(IndexOutOfBoundsException expected){checks++;}
+        AtomicLongArray longs=new AtomicLongArray(new long[]{Long.MAX_VALUE,-9});
+        check(longs.getAndIncrement(0)==Long.MAX_VALUE&&longs.get(0)==Long.MIN_VALUE);
+        check(longs.getAndSet(1,1L<<40)==-9);check(longs.compareAndExchangeRelease(1,1L<<40,(1L<<50)+17)==1L<<40);
+        check(longs.accumulateAndGet(1,3,Long::sum)==(1L<<50)+20);
+        String first=new String("same"),equal=new String("same");
+        AtomicReferenceArray<Object> refs=new AtomicReferenceArray<Object>(new String[]{first});
+        check(!refs.compareAndSet(0,equal,"bad"));check(refs.compareAndSet(0,first,42));
+        check(refs.getAndSet(0,null).equals(42)&&refs.get(0)==null);
+        check(refs.updateAndGet(0,value->"updated").equals("updated"));
+        check(refs.getAndAccumulate(0,"!",(left,right)->left.toString()+right).equals("updated")&&refs.get(0).equals("updated!"));
+        check(ints.toString().equals("[-2147483648, 61]"));
+        ConcurrentLinkedQueue<String> queue=new ConcurrentLinkedQueue<>();
+        check(queue.poll()==null&&queue.peek()==null);queue.offer(first);queue.offer(equal);
+        Iterator<String> iterator=queue.iterator();check(iterator.next()==first);check(queue.poll()==first);iterator.remove();
+        check(queue.size()==1&&queue.peek()==equal);check(iterator.next()==equal);iterator.remove();check(queue.isEmpty());
+        try{queue.offer(null);throw new AssertionError();}catch(NullPointerException expected){checks++;}
+        queue.addAll(List.of("a","b","c"));check(queue.remove("b")&&new ArrayList<>(queue).equals(List.of("a","c")));
+        queue.clear();check(queue.isEmpty());
+        LinkedBlockingQueue<Integer> bounded=new LinkedBlockingQueue<>(2);bounded.put(1);check(bounded.offer(2)&&!bounded.offer(3));
+        check(bounded.remainingCapacity()==0&&!bounded.offer(3,0,TimeUnit.NANOSECONDS));
+        check(bounded.take()==1&&bounded.poll(0,TimeUnit.NANOSECONDS)==2&&bounded.poll(0,TimeUnit.NANOSECONDS)==null);
+        bounded.addAll(List.of(4,5));List<Integer> drained=new ArrayList<>();check(bounded.drainTo(drained,1)==1&&drained.equals(List.of(4))&&bounded.peek()==5);
+        check(bounded.drainTo(drained)==1&&drained.equals(List.of(4,5))&&bounded.remainingCapacity()==2);
+        try{bounded.drainTo(bounded);throw new AssertionError();}catch(IllegalArgumentException expected){checks++;}
+        try{new LinkedBlockingQueue<>(0);throw new AssertionError();}catch(IllegalArgumentException expected){checks++;}
+        check(!(((Object)bounded) instanceof ConcurrentLinkedQueue));
         System.out.println("WEBCRAFT_APIS_OK "+checks);
     }
 }

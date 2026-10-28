@@ -9,6 +9,12 @@ public final class PortBrowserApis implements Opcodes {
     static final String PREFIX="dev/webcraft/compat/";
     static final Map<String,String> TYPES=new LinkedHashMap<>();
     static {
+        TYPES.put("java/util/concurrent/atomic/AtomicIntegerArray",PREFIX+"BrowserAtomicIntegerArray");
+        TYPES.put("java/util/concurrent/atomic/AtomicLongArray",PREFIX+"BrowserAtomicLongArray");
+        TYPES.put("java/util/concurrent/atomic/AtomicReferenceArray",PREFIX+"BrowserAtomicReferenceArray");
+        TYPES.put("java/util/concurrent/ConcurrentLinkedQueue",PREFIX+"BrowserConcurrentLinkedQueue");
+        TYPES.put("java/util/concurrent/LinkedBlockingQueue",PREFIX+"BrowserLinkedBlockingQueue");
+        TYPES.put("java/util/concurrent/BlockingQueue",PREFIX+"BrowserBlockingQueue");
         TYPES.put("java/lang/ScopedValue",PREFIX+"BrowserScopedValue");
         TYPES.put("java/lang/ScopedValue$Carrier",PREFIX+"BrowserScopedValue$Carrier");
         TYPES.put("java/lang/ScopedValue$CallableOp",PREFIX+"BrowserScopedValue$CallableOp");

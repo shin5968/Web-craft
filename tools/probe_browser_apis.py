@@ -103,7 +103,7 @@ def compile_wasm(artifacts,entry,directory,name):
     except subprocess.TimeoutExpired:
         timed_out=True;code=None;text=(DIRECTORY/(name+'.log')).read_text(errors='replace')
     errors=[line for line in text.splitlines() if '[ERROR]' in line]
-    categories={key:sum(key in line for line in errors) for key in ['java.lang.ScopedValue','java.lang.StackWalker','java.util.concurrent.locks.','ClassLoader.getResource','Class.getResource','ClassLoader.loadClass']}
+    categories={key:sum(key in line for line in errors) for key in ['java.lang.ScopedValue','java.lang.StackWalker','java.util.concurrent.locks.','ClassLoader.getResource','Class.getResource','ClassLoader.loadClass','java.util.concurrent.atomic.Atomic','java.util.concurrent.LinkedBlockingQueue','java.util.concurrent.ConcurrentLinkedQueue','java.util.concurrent.BlockingQueue']}
     complete=not timed_out and code not in (137,-9) and 'OutOfMemoryError' not in text
     return dict(status='timeout' if timed_out else ('compiled' if code==0 else 'compile-failed'),exitCode=code,
                 diagnosticsComplete=complete,errorLineCount=len(errors),requestedApiDiagnostics=categories if complete else None,diagnostics=errors[:200])
