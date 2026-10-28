@@ -168,14 +168,14 @@ def main():
         runtimeclasses=DIRECTORY/'runtime-classes';runtimeclasses.mkdir(exist_ok=True)
         originalcp=os.pathsep.join(item['path'] for item in original_items)
         bootstrap=ROOT/'browser-bootstrap/src/main/java/dev/webcraft/browser/RegistryBootstrap.java'
-        require(['javac','--release','25','-cp',originalcp,'-d',runtimeclasses,*list((ROOT/'browser-compat/src/main/java').rglob('*.java')),generated,bootstrap],'compile-registry-runtime')
+        require(['javac','--release','25','-cp',originalcp,'-d',runtimeclasses,*list((ROOT/'browser-compat/src/main/java').rglob('*.java')),generated,bootstrap,bootstrap.with_name('RegistryJvmHarness.java')],'compile-registry-runtime')
         runtimejar=DIRECTORY/'registry-runtime.jar';require(['jar','--create','--file',runtimejar,'-C',runtimeclasses,'.'],'jar-registry-runtime')
-        reference=require(['java','-Xmx3g','-cp',str(runtimejar)+os.pathsep+originalcp,'dev.webcraft.browser.RegistryBootstrap'],'registry-reference',90)
+        reference=require(['java','-Xmx3g','-cp',str(runtimejar)+os.pathsep+originalcp,'dev.webcraft.browser.RegistryJvmHarness'],'registry-reference',90)
         reference_registry=json.loads(re.search(r'WEBCRAFT_REGISTRY_OK (\{[^\n]*\})',reference).group(1))
         report['phase']='registry-port'
         ported=port([artifact('registry-runtime',runtimejar),*lazy_items],'registry-port')
         cp=os.pathsep.join(item['path'] for item in ported)
-        registered=require(['java','-Xmx3g','-cp',cp,'dev.webcraft.browser.RegistryBootstrap'],'registry-port-jvm',90)
+        registered=require(['java','-Xmx3g','-cp',cp,'dev.webcraft.browser.RegistryJvmHarness'],'registry-port-jvm',90)
         registry=json.loads(re.search(r'WEBCRAFT_REGISTRY_OK (\{[^\n]*\})',registered).group(1))
         if registry!=reference_registry:raise AssertionError('Original and port registry results differ')
         report['registryJvm']=dict(status='passed',registry=registry)
@@ -183,7 +183,7 @@ def main():
         report['phase']='registry-wasm'
         report['registryWasm']=compile_wasm(ported,'dev.webcraft.browser.RegistryBootstrap',DIRECTORY/'registry-wasm','registry-wasm')
         if report['registryWasm']['status']=='compiled':
-            registered=require(['node',ROOT/'tools/run_wasm_main.mjs',DIRECTORY/'registry-wasm/startup.wasm'],'registry-wasm-run',90)
+            registered=require(['node',ROOT/'tools/run_wasm_main.mjs',DIRECTORY/'registry-wasm/startup.wasm','--registry-result'],'registry-wasm-run',90)
             actual=json.loads(re.search(r'WEBCRAFT_REGISTRY_OK (\{[^\n]*\})',registered).group(1))
             if actual!=reference_registry:raise AssertionError('Wasm registry differs')
             report['registryWasm']['execution']='passed'

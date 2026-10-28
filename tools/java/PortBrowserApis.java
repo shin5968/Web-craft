@@ -56,6 +56,9 @@ public final class PortBrowserApis implements Opcodes {
             public void visit(int v,int a,String n,String s,String p,String[] i){className=n;super.visit((v&0xffff)<V1_5?V1_5:v,a,n,s,p,i);}
             public MethodVisitor visitMethod(int access,String name,String descriptor,String signature,String[] exceptions){
                 MethodVisitor destination=super.visitMethod(access,name,descriptor,signature,exceptions);
+                if(className.equals("dev/webcraft/browser/RegistryBootstrap")&&name.equals("registryResult")&&descriptor.equals("()Ljava/lang/String;")){
+                    destination.visitAnnotation("Lorg/teavm/jso/JSExport;",true).visitEnd();
+                }
                 return new AdviceAdapter(ASM9,destination,access,name,descriptor){
                     final Label start=new Label(),end=new Label(),handler=new Label();boolean entered;
                     protected void onMethodEnter(){
