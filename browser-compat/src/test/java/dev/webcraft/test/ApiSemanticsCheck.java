@@ -59,6 +59,12 @@ public final class ApiSemanticsCheck {
         try(InputStream stream=ApiSemanticsCheck.class.getClassLoader().getResourceAsStream("fixtures/sample.txt")){check(stream!=null&&stream.read()==98);}
         check(ApiSemanticsCheck.class.getClassLoader().getResource("/fixtures/sample.txt")==null);
         check(Collections.list(ClassLoader.getSystemResources("fixtures/providers.txt")).size()==2);
+        LockSupport.unpark(Thread.currentThread());LockSupport.park();checks++;
+        LockSupport.unpark(Thread.currentThread());LockSupport.unpark(Thread.currentThread());LockSupport.park();checks++;
+        LockSupport.parkNanos(0);LockSupport.parkNanos(-1);check(LockSupport.getBlocker(Thread.currentThread())==null);
+        Object blocker=new Object();LockSupport.setCurrentBlocker(blocker);check(LockSupport.getBlocker(Thread.currentThread())==blocker);LockSupport.setCurrentBlocker(null);
+        Thread.currentThread().interrupt();LockSupport.park();check(Thread.interrupted());
+        LockSupport.unpark(null);checks++;
         System.out.println("WEBCRAFT_APIS_OK "+checks);
     }
 }

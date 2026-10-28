@@ -15,6 +15,10 @@ public final class ProfileLimitsCheck {
         try{lock.newCondition().await();throw new AssertionError();}catch(UnsupportedOperationException expected){}
         lock.unlock();
         try{BrowserStackWalker.getInstance().getCallerClass();throw new AssertionError();}catch(UnsupportedOperationException expected){}
+        try{BrowserLockSupport.park();throw new AssertionError();}catch(UnsupportedOperationException expected){}
+        BrowserLockSupport.unpark(Thread.currentThread());BrowserLockSupport.unpark(Thread.currentThread());BrowserLockSupport.park();
+        try{BrowserLockSupport.park();throw new AssertionError("Permits accumulated");}catch(UnsupportedOperationException expected){}
+        try{BrowserLockSupport.parkNanos(1);throw new AssertionError();}catch(UnsupportedOperationException expected){}
         System.out.println("WEBCRAFT_PROFILE_LIMITS_OK");
     }
 }

@@ -15,6 +15,7 @@ public final class PortBrowserApis implements Opcodes {
         TYPES.put("java/lang/StackWalker",PREFIX+"BrowserStackWalker");
         TYPES.put("java/lang/StackWalker$Option",PREFIX+"BrowserStackWalker$Option");
         TYPES.put("java/lang/StackWalker$StackFrame",PREFIX+"BrowserStackWalker$StackFrame");
+        TYPES.put("java/util/concurrent/locks/LockSupport",PREFIX+"BrowserLockSupport");
         TYPES.put("java/util/concurrent/locks/Lock",PREFIX+"BrowserLock");
         TYPES.put("java/util/concurrent/locks/Condition",PREFIX+"BrowserCondition");
         TYPES.put("java/util/concurrent/locks/ReentrantLock",PREFIX+"BrowserReentrantLock");
