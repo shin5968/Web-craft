@@ -12,6 +12,7 @@ import zipfile
 from fetch_target import MANIFEST, read_url, verified_download
 from prepare_minecraft_smoke import ROOT, VERSION, SHA256
 from probe_minecraft_startup import make_pom
+from inspect_jar import ClassReader
 
 DIRECTORY=ROOT/'reports/browser-api-probe'
 
@@ -27,12 +28,28 @@ def run(command, name, timeout=240):
 
 def require(command,name,timeout=240):
     code,text=run(command,name,timeout)
-    if code:raise RuntimeError(f'{name} failed ({code}): '+text[-5000:])
+    if code:
+        useful='\n'.join(line[:1200] for line in text.splitlines() if 'error:' in line or 'Exception' in line or 'Error:' in line or '[ERROR]' in line)
+        raise RuntimeError(f'{name} failed ({code}): '+(useful or text[-4000:]))
     return text
 
 
+def public_class(data):
+    reader=ClassReader(data);reader.take(8);count=reader.u2();index=1
+    while index<count:
+        tag=reader.u1()
+        if tag==1:reader.take(reader.u2())
+        elif tag in (7,8,16,19,20):reader.take(2)
+        elif tag in (3,4,9,10,11,12,17,18):reader.take(4)
+        elif tag in (5,6):reader.take(8);index+=1
+        elif tag==15:reader.take(3)
+        else:raise ValueError('Unknown class constant')
+        index+=1
+    return bool(reader.u2()&1)
+
+
 def embedded_source(artifacts,directory,fixture_only=False):
-    resources=[];providers=set();total=0
+    resources=[];providers=set();excluded=set();total=0
     for artifact in artifacts:
         with zipfile.ZipFile(artifact['path']) as archive:
             names=set(archive.namelist())
@@ -48,7 +65,11 @@ def embedded_source(artifacts,directory,fixture_only=False):
                     for line in data.decode('utf8').splitlines():
                         provider=line.split('#',1)[0].strip()
                         if re.fullmatch(r'[A-Za-z_$][\w$]*(\.[A-Za-z_$][\w$]*)+',provider) and provider.replace('.','/')+'.class' in names:
-                            providers.add(provider)
+                            binary=provider.replace('.','/')
+                            hierarchy=[binary.split('$')[0]]
+                            hierarchy.extend('$'.join(binary.split('$')[:i+1]) for i in range(1,len(binary.split('$'))))
+                            if all(path+'.class' in names and public_class(archive.read(path+'.class')) for path in hierarchy):providers.add(provider)
+                            else:excluded.add(provider)
     # Strings are chunked well below the JVM constant-pool UTF-8 size limit.
     statements=[]
     for index,(name,data) in enumerate(resources):
@@ -61,11 +82,11 @@ def embedded_source(artifacts,directory,fixture_only=False):
     # Split registration into small methods, including when many metadata files exist.
     methods=[]
     for index in range(0,len(statements),30):
-        methods.append('private static void part'+str(index//30)+'(){'+''.join(statements[index:index+30])+'}')
+        methods.append('private static void part'+str(index//30)+'(){\n'+'\n'.join(statements[index:index+30])+'\n}')
     source='package dev.webcraft.compat; public final class EmbeddedResources { private static boolean installed; public static synchronized void install(){if(installed)return;'
-    source+=''.join('part'+str(i)+'();' for i in range(len(methods)))+'installed=true;}' + ''.join(methods)+'}'
+    source+=''.join('part'+str(i)+'();' for i in range(len(methods)))+'installed=true;}' + '\n'.join(methods)+'}'
     directory.mkdir(parents=True,exist_ok=True);path=directory/'EmbeddedResources.java';path.write_text(source)
-    return path,dict(resourceCount=len(resources),bytes=total,registeredProviders=sorted(providers),
+    return path,dict(resourceCount=len(resources),bytes=total,registeredProviders=sorted(providers),excludedNonPublicProviders=sorted(excluded),
                      selection='version.json, pack.mcmeta, fixtures, META-INF/services, properties and XML; read-only; classpath order retained')
 
 
