@@ -55,7 +55,7 @@ def embedded_source(artifacts,directory,fixture_only=False):
             names=set(archive.namelist())
             for info in archive.infolist():
                 name=info.filename
-                wanted=(name.startswith('fixtures/') or name=='version.json' or name=='pack.mcmeta' or name=='assets/minecraft/lang/en_us.json'
+                wanted=(name.startswith('fixtures/') or name=='version.json' or name=='pack.mcmeta' or (name.startswith('assets/minecraft/lang/') and name.endswith('.json'))
                         or name.startswith('META-INF/services/') or name.endswith(('.properties','.xml')))
                 if info.is_dir() or not wanted:continue
                 data=archive.read(info);total+=len(data)
@@ -87,7 +87,7 @@ def embedded_source(artifacts,directory,fixture_only=False):
     source+=''.join('part'+str(i)+'();' for i in range(len(methods)))+'installed=true;}' + '\n'.join(methods)+'}'
     directory.mkdir(parents=True,exist_ok=True);path=directory/'EmbeddedResources.java';path.write_text(source)
     return path,dict(resourceCount=len(resources),bytes=total,registeredProviders=sorted(providers),excludedNonPublicProviders=sorted(excluded),
-                     selection='version.json, pack.mcmeta, default en_us translations, fixtures, META-INF/services, properties and XML; read-only; classpath order retained')
+                     selection='version.json, pack.mcmeta, default translation and deprecated-key metadata, fixtures, META-INF/services, properties and XML; read-only; classpath order retained')
 
 
 def compile_wasm(artifacts,entry,directory,name):
